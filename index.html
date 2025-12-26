@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="InvestTrack" />
   <meta name="theme-color" content="#0b1220" />
 
-  <!-- Chart.js (defer כדי שלא "ישבור" את הטעינה) -->
+  <!-- Chart.js -->
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
@@ -70,7 +70,7 @@
 
     .container { padding: 12px 10px 18px; max-width: 960px; margin: 0 auto; }
 
-    /* שורת שגיאה במקום "מסך שחור" */
+    /* Error bar */
     .error-bar {
       display:none;
       margin: 10px 10px 0;
@@ -178,6 +178,35 @@
 
     .edit-indicator { display:none; margin-top:4px; font-size:11px; color:#facc15; }
     .edit-indicator.active { display:flex; align-items:center; gap:6px; }
+
+    /* Progress bar */
+    .progress-wrap {
+      display:none;
+      margin-top:10px;
+      padding:10px;
+      border-radius:14px;
+      border:1px solid rgba(55,65,81,0.9);
+      background: rgba(2,6,23,0.65);
+    }
+    .progress-wrap.show { display:block; }
+    .progress-top { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:8px; }
+    .progress-text { font-size:12px; color: var(--text-muted); }
+    .progress-track {
+      width:100%;
+      height:10px;
+      border-radius:999px;
+      background: rgba(31,41,55,0.9);
+      overflow:hidden;
+      border:1px solid rgba(55,65,81,0.9);
+    }
+    .progress-bar {
+      height:100%;
+      width:0%;
+      border-radius:999px;
+      background: var(--accent);
+      box-shadow: 0 0 16px rgba(34,197,94,0.35);
+      transition: width .2s ease;
+    }
   </style>
 </head>
 
@@ -275,6 +304,19 @@
         <button class="btn btn-secondary" id="btnRecalc">רענן חישובים</button>
         <button class="btn btn-secondary" id="btnUpdatePrices">עדכן מחירי שוק (Alpha Vantage)</button>
       </div>
+
+      <!-- Progress UI -->
+      <div id="quoteProgressWrap" class="progress-wrap">
+        <div class="progress-top">
+          <div class="progress-text" id="quoteProgressText">מעדכן…</div>
+          <div class="progress-text" id="quoteProgressPct">0%</div>
+        </div>
+        <div class="progress-track"><div class="progress-bar" id="quoteProgressBar"></div></div>
+        <div class="small" style="margin-top:6px;">
+          Alpha Vantage מגביל ל־5 קריאות בדקה. האפליקציה ממתינה אוטומטית בין סימולים.
+        </div>
+      </div>
+
       <div class="small" id="onlineQuotesStatus" style="margin-top:6px;"></div>
     </div>
 
@@ -600,7 +642,9 @@
   function buildPositions() {
     const map = {};
     state.trades.forEach(tr => {
-      const key = tr.symbol.toUpperCase();
+      const key = (tr.symbol || '').toUpperCase();
+      if (!key) return;
+
       if (!map[key]) {
         map[key] = { symbol: key, currency: tr.currency, qty: 0, lastPrice: tr.price, lastPriceSource: 'trade', lastPriceDate: tr.date };
       }
@@ -770,7 +814,7 @@
         <td>${valueBase.toFixed(2)} ${base}</td>
       `;
 
-      // ✅ חדש: קליק על שורה -> מילוי טופס מחיר ידני
+      // קליק על שורה -> מילוי טופס מחיר ידני
       tr.style.cursor = 'pointer';
       tr.title = 'לחץ כדי למלא בטופס "עדכון מחיר ידני"';
       tr.addEventListener('click', () => {
@@ -800,7 +844,7 @@
       ? 'עדכון מחירי שוק אונליין: פעיל (Alpha Vantage).'
       : 'עדכון מחירי שוק אונליין: כבוי (אין יציאה לאינטרנט).';
 
-    // גרף: אם Chart.js לא נטען, לא נופלים
+    // Chart.js fallback
     const chartFallback = document.getElementById('chartFallback');
     if (typeof window.Chart !== 'function') {
       chartFallback.style.display = 'block';
@@ -831,7 +875,7 @@
       row.innerHTML = `
         <td>${tr.date}</td>
         <td>${tr.type === 'buy' ? 'קנייה' : 'מכירה'}</td>
-        <td>${tr.symbol.toUpperCase()}</td>
+        <td>${(tr.symbol||'').toUpperCase()}</td>
         <td>${Number(tr.qty).toFixed(4)}</td>
         <td>${Number(tr.price).toFixed(4)}</td>
         <td>${tr.currency}</td>
@@ -855,7 +899,7 @@
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${d.date}</td>
-        <td>${d.symbol.toUpperCase()}</td>
+        <td>${(d.symbol||'').toUpperCase()}</td>
         <td>${Number(d.amount).toFixed(2)}</td>
         <td>${d.currency}</td>
       `;
@@ -930,10 +974,10 @@
   document.getElementById('tradeForm').addEventListener('submit', e => {
     e.preventDefault();
     const type = document.getElementById('tradeType').value;
-    const symbol = document.getElementById('tradeSymbol').value.trim();
+    const symbol = (document.getElementById('tradeSymbol').value || '').trim();
     const qty = Number(document.getElementById('tradeQty').value);
     const price = Number(document.getElementById('tradePrice').value);
-    const currency = document.getElementById('tradeCurrency').value.trim() || state.settings.baseCurrency;
+    const currency = (document.getElementById('tradeCurrency').value || '').trim() || state.settings.baseCurrency;
     const fee = Number(document.getElementById('tradeFee').value || 0);
     const date = document.getElementById('tradeDate').value;
 
@@ -967,9 +1011,9 @@
   // Dividends manual
   document.getElementById('dividendForm').addEventListener('submit', e => {
     e.preventDefault();
-    const symbol = document.getElementById('divSymbol').value.trim();
+    const symbol = (document.getElementById('divSymbol').value || '').trim();
     const amount = Number(document.getElementById('divAmount').value);
-    const currency = document.getElementById('divCurrency').value.trim() || state.settings.baseCurrency;
+    const currency = (document.getElementById('divCurrency').value || '').trim() || state.settings.baseCurrency;
     const date = document.getElementById('divDate').value;
     if (!symbol || !date || !amount) return;
 
@@ -1063,14 +1107,37 @@
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
   function normalizeSymbol(raw) { return (raw || '').trim().toUpperCase(); }
 
+  // Progress helpers
+  const progressWrap = document.getElementById('quoteProgressWrap');
+  const progressBar = document.getElementById('quoteProgressBar');
+  const progressText = document.getElementById('quoteProgressText');
+  const progressPct = document.getElementById('quoteProgressPct');
+  const btnUpdatePrices = document.getElementById('btnUpdatePrices');
+
+  function progressShow() {
+    progressWrap.classList.add('show');
+    progressBar.style.width = '0%';
+    progressPct.textContent = '0%';
+    progressText.textContent = 'מתחיל עדכון…';
+  }
+  function progressHide() {
+    progressWrap.classList.remove('show');
+  }
+  function progressSet(done, total, currentSymbol) {
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    progressBar.style.width = pct + '%';
+    progressPct.textContent = pct + '%';
+    progressText.textContent = `מעדכן ${done}/${total}: ${currentSymbol || ''}`;
+  }
+
   // ---- Alpha Vantage: prices (ETF-friendly) ----
   async function fetchQuote(symbol) {
-    if (!state.settings.enableOnlineQuotes) return { ok:false, reason:'disabled' };
+    if (!state.settings.enableOnlineQuotes) return { error: 'OFFLINE' };
     const apiKey = state.settings.alphaVantageKey;
-    if (!apiKey) return { ok:false, reason:'no_key' };
+    if (!apiKey) return { error: 'NO_KEY' };
 
     const cleanSymbol = symbol.toUpperCase().trim();
-    if (!cleanSymbol) return { ok:false, reason:'empty_symbol' };
+    if (!cleanSymbol) return { error: 'EMPTY' };
 
     const url =
       'https://www.alphavantage.co/query' +
@@ -1079,30 +1146,23 @@
       '&outputsize=compact' +
       '&apikey=' + encodeURIComponent(apiKey);
 
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return { ok:false, reason:'http', status: res.status };
+    const res = await fetch(url);
+    const data = await res.json();
 
-      const data = await res.json();
+    if (data.Note) return { error: 'RATE_LIMIT', message: data.Note };
+    if (data['Error Message']) return { error: 'INVALID_SYMBOL' };
 
-      if (data.Note) return { ok:false, reason:'rate_limit', message: data.Note };
-      if (data['Error Message']) return { ok:false, reason:'error_message', message: data['Error Message'] };
+    const series = data['Time Series (Daily)'];
+    if (!series) return { error: 'NO_DATA' };
 
-      const series = data['Time Series (Daily)'];
-      if (!series) return { ok:false, reason:'no_series' };
+    const latestDate = Object.keys(series).sort().pop();
+    const close = parseFloat(series[latestDate]['4. close']);
+    if (!isFinite(close)) return { error: 'BAD_PRICE' };
 
-      const dates = Object.keys(series).sort().reverse();
-      const latest = dates[0];
-      const close = parseFloat(series[latest]['4. close']);
-      if (!isFinite(close)) return { ok:false, reason:'bad_price' };
-
-      return { ok:true, symbol: cleanSymbol, price: close, currency: 'USD', asOf: latest };
-    } catch (e) {
-      return { ok:false, reason:'exception', message: e?.message || String(e) };
-    }
+    return { price: close, currency: 'USD', asOf: latestDate };
   }
 
-  document.getElementById('btnUpdatePrices').addEventListener('click', async () => {
+  btnUpdatePrices.addEventListener('click', async () => {
     const positions = buildPositions();
     if (positions.length === 0) { alert('אין פוזיציות פתוחות.'); return; }
 
@@ -1115,15 +1175,32 @@
       return;
     }
 
+    // UI lock + progress
+    btnUpdatePrices.disabled = true;
+    progressShow();
+
     let updatedCount = 0;
-    const failed = [];
+    let failed = [];
+    let rateLimited = false;
 
-    for (let i = 0; i < positions.length; i++) {
+    const total = positions.length;
+
+    for (let i = 0; i < total; i++) {
       const p = positions[i];
-      const result = await fetchQuote(p.symbol);
+      const sym = p.symbol.toUpperCase();
 
-      if (result.ok) {
-        state.lastPrices[p.symbol.toUpperCase()] = {
+      progressSet(i, total, sym);
+
+      // Skip obvious IL numeric symbols (manual)
+      if (/^\d{5,}$/.test(sym)) {
+        failed.push(sym);
+        continue;
+      }
+
+      const result = await fetchQuote(sym);
+
+      if (result?.price) {
+        state.lastPrices[sym] = {
           price: result.price,
           currency: result.currency || p.currency,
           updatedAt: new Date().toISOString(),
@@ -1131,29 +1208,32 @@
         };
         updatedCount++;
       } else {
-        if (result.reason === 'rate_limit') {
-          saveState();
-          renderPortfolio();
-          alert(
-            'Alpha Vantage: הגעת למגבלת קריאות (5 בדקה).\n' +
-            'מה שכבר עודכן נשמר.\n' +
-            'נסה שוב בעוד דקה.\n\n' +
-            (result.message || '')
-          );
-          return;
+        failed.push(sym);
+        if (result?.error === 'RATE_LIMIT') {
+          rateLimited = true;
+          break;
         }
-        failed.push(p.symbol.toUpperCase());
       }
 
-      // Free tier: ~5 calls/min => ~12.5s delay
-      if (i < positions.length - 1) await sleep(12500);
+      // Free tier: 5 calls/min
+      if (i < total - 1) await sleep(12500);
     }
+
+    // Finish progress
+    progressSet(Math.min(total, updatedCount + failed.length), total, 'סיום…');
+    await sleep(300); // tiny UI breath
 
     saveState();
     renderPortfolio();
+
+    btnUpdatePrices.disabled = false;
+    progressHide();
+
     alert(
-      'סיום עדכון מחירי שוק.\nעודכנו מחירים עבור ' + updatedCount + ' ניירות.' +
-      (failed.length ? '\nלא עודכנו: ' + failed.join(', ') : '')
+      'סיום עדכון מחירי שוק.\n' +
+      'עודכנו: ' + updatedCount + ' ניירות.\n' +
+      (failed.length ? ('לא עודכנו: ' + failed.join(', ') + '\n') : '') +
+      (rateLimited ? '⚠️ Alpha Vantage חסם עקב Rate Limit. נסה שוב בעוד דקה.' : '')
     );
   });
 
@@ -1202,7 +1282,7 @@
   // ---- Alpha Vantage: dividends with holding-interval filter ----
   function getHoldingIntervalsForSymbol(symbol) {
     const clean = symbol.toUpperCase();
-    const trades = state.trades.filter(t => t.symbol.toUpperCase() === clean).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const trades = state.trades.filter(t => (t.symbol||'').toUpperCase() === clean).slice().sort((a, b) => a.date.localeCompare(b.date));
     const intervals = [];
     let cumQty = 0;
     let currentStart = null;
@@ -1238,7 +1318,7 @@
     let qty = 0;
 
     state.trades
-      .filter(t => t.symbol.toUpperCase() === clean && t.date <= cutoff)
+      .filter(t => (t.symbol||'').toUpperCase() === clean && t.date <= cutoff)
       .sort((a, b) => a.date.localeCompare(b.date))
       .forEach(tr => qty += (tr.type === 'buy' ? 1 : -1) * Number(tr.qty));
 
@@ -1278,7 +1358,7 @@
 
       const existingKeys = new Set(
         state.dividends
-          .filter(d => d.symbol.toUpperCase() === cleanSymbol)
+          .filter(d => (d.symbol||'').toUpperCase() === cleanSymbol)
           .map(d => cleanSymbol + '|' + d.date + '|' + Number(d.amount).toFixed(6))
       );
 
@@ -1330,7 +1410,6 @@
   loadState();
   setDefaultDates();
 
-  // חשוב: מחכים לטען סקריפטים (כולל Chart.js עם defer)
   window.addEventListener('load', () => {
     try { renderAll(); }
     catch (e) { console.error(e); showErr('Render error: ' + (e.message || e)); }

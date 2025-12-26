@@ -374,7 +374,7 @@
         </thead>
         <tbody></tbody>
       </table>
-      <div class="small" style="margin-top:6px;">מחיר אחרון = עסקה אחרונה / Alpha Vantage / מחיר ידני (לפי העדיפות).</div>
+      <div class="small" style="margin-top:6px;">מחיר אחרון = עסקה אחרונה / Alpha Vantage (GLOBAL_QUOTE) / מחיר ידני (לפי העדיפות).</div>
     </div>
 
     <div class="section-title"><span class="icon">🧩</span> Allocation by Symbol</div>
@@ -543,7 +543,7 @@
 
       <label style="margin-top:6px;">Alpha Vantage API Key</label>
       <input id="alphaVantageKey" placeholder="הדבק כאן את ה-API key שלך" />
-      <div class="small">לדוגמה: FYIUASHZYNHG80F1</div>
+      <div class="small">לדוגמה: 123456</div>
     </div>
 
     <div class="section-title"><span class="icon">🛟</span> גיבוי / שחזור נתונים</div>
@@ -667,7 +667,7 @@
       }
     });
 
-    // רק פוזיציות פתוחות
+    // only open positions
     return Object.values(map).filter(p => Math.abs(p.qty) > 1e-12);
   }
 
@@ -814,7 +814,6 @@
         <td>${valueBase.toFixed(2)} ${base}</td>
       `;
 
-      // קליק על שורה -> מילוי טופס מחיר ידני
       tr.style.cursor = 'pointer';
       tr.title = 'לחץ כדי למלא בטופס "עדכון מחיר ידני"';
       tr.addEventListener('click', () => {
@@ -841,10 +840,9 @@
 
     const statusEl = document.getElementById('onlineQuotesStatus');
     statusEl.textContent = state.settings.enableOnlineQuotes
-      ? 'עדכון מחירי שוק אונליין: פעיל (Alpha Vantage).'
+      ? 'עדכון מחירי שוק אונליין: פעיל (Alpha Vantage - GLOBAL_QUOTE).'
       : 'עדכון מחירי שוק אונליין: כבוי (אין יציאה לאינטרנט).';
 
-    // Chart.js fallback
     const chartFallback = document.getElementById('chartFallback');
     if (typeof window.Chart !== 'function') {
       chartFallback.style.display = 'block';
@@ -1130,7 +1128,7 @@
     progressText.textContent = `מעדכן ${done}/${total}: ${currentSymbol || ''}`;
   }
 
-  // ---- Alpha Vantage: prices (ETF-friendly) ----
+  // ---- Alpha Vantage: FREE endpoint for quotes ----
   async function fetchQuote(symbol) {
     if (!state.settings.enableOnlineQuotes) return { error: 'OFFLINE' };
     const apiKey = state.settings.alphaVantageKey;
@@ -1141,25 +1139,28 @@
 
     const url =
       'https://www.alphavantage.co/query' +
-      '?function=TIME_SERIES_DAILY_ADJUSTED' +
+      '?function=GLOBAL_QUOTE' +
       '&symbol=' + encodeURIComponent(cleanSymbol) +
-      '&outputsize=compact' +
       '&apikey=' + encodeURIComponent(apiKey);
 
-    const res = await fetch(url);
-    const data = await res.json();
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
 
-    if (data.Note) return { error: 'RATE_LIMIT', message: data.Note };
-    if (data['Error Message']) return { error: 'INVALID_SYMBOL' };
+      if (data.Note) return { error: 'RATE_LIMIT', message: data.Note };
+      if (data.Information) return { error: 'INFO', message: data.Information };
+      if (data['Error Message']) return { error: 'INVALID_SYMBOL', message: data['Error Message'] };
 
-    const series = data['Time Series (Daily)'];
-    if (!series) return { error: 'NO_DATA' };
+      const quote = data['Global Quote'];
+      if (!quote) return { error: 'NO_DATA' };
 
-    const latestDate = Object.keys(series).sort().pop();
-    const close = parseFloat(series[latestDate]['4. close']);
-    if (!isFinite(close)) return { error: 'BAD_PRICE' };
+      const price = parseFloat(quote['05. price']);
+      if (!isFinite(price)) return { error: 'BAD_PRICE' };
 
-    return { price: close, currency: 'USD', asOf: latestDate };
+      return { price, currency: 'USD', asOf: quote['07. latest trading day'] || null };
+    } catch (e) {
+      return { error: 'NETWORK' };
+    }
   }
 
   btnUpdatePrices.addEventListener('click', async () => {
@@ -1175,13 +1176,12 @@
       return;
     }
 
-    // UI lock + progress
     btnUpdatePrices.disabled = true;
     progressShow();
 
     let updatedCount = 0;
     let failed = [];
-    let rateLimited = false;
+    let stopped = false;
 
     const total = positions.length;
 
@@ -1191,9 +1191,9 @@
 
       progressSet(i, total, sym);
 
-      // Skip obvious IL numeric symbols (manual)
+      // Skip IL numeric symbols (manual)
       if (/^\d{5,}$/.test(sym)) {
-        failed.push(sym);
+        failed.push(sym + ' [IL_MANUAL]');
         continue;
       }
 
@@ -1208,20 +1208,19 @@
         };
         updatedCount++;
       } else {
-        failed.push(sym);
-        if (result?.error === 'RATE_LIMIT') {
-          rateLimited = true;
+        const reason = result?.error || 'UNKNOWN';
+        const msg = result?.message ? (' — ' + String(result.message).slice(0,120)) : '';
+        failed.push(sym + ' [' + reason + ']' + msg);
+
+        if (reason === 'RATE_LIMIT' || reason === 'INFO') {
+          stopped = true;
           break;
         }
       }
 
-      // Free tier: 5 calls/min
+      // Free tier: 5 calls/min => wait
       if (i < total - 1) await sleep(12500);
     }
-
-    // Finish progress
-    progressSet(Math.min(total, updatedCount + failed.length), total, 'סיום…');
-    await sleep(300); // tiny UI breath
 
     saveState();
     renderPortfolio();
@@ -1233,7 +1232,7 @@
       'סיום עדכון מחירי שוק.\n' +
       'עודכנו: ' + updatedCount + ' ניירות.\n' +
       (failed.length ? ('לא עודכנו: ' + failed.join(', ') + '\n') : '') +
-      (rateLimited ? '⚠️ Alpha Vantage חסם עקב Rate Limit. נסה שוב בעוד דקה.' : '')
+      (stopped ? '⚠️ עצרתי מוקדם בגלל הודעת מערכת/מגבלת קריאות. נסה שוב בעוד דקה.' : '')
     );
   });
 
@@ -1279,7 +1278,7 @@
     }
   });
 
-  // ---- Alpha Vantage: dividends with holding-interval filter ----
+  // ---- Alpha Vantage: dividends (unchanged; monthly adjusted is still used) ----
   function getHoldingIntervalsForSymbol(symbol) {
     const clean = symbol.toUpperCase();
     const trades = state.trades.filter(t => (t.symbol||'').toUpperCase() === clean).slice().sort((a, b) => a.date.localeCompare(b.date));
@@ -1348,6 +1347,7 @@
       const data = await res.json();
 
       if (data.Note) { alert('מגבלת קריאות (Alpha Vantage). נסה שוב בעוד דקה.\n\n' + data.Note); return 0; }
+      if (data.Information) { alert('הודעת מערכת מ-Alpha Vantage:\n\n' + data.Information); return 0; }
       if (data['Error Message']) { alert('שגיאה: ' + data['Error Message']); return 0; }
 
       const series = data['Monthly Adjusted Time Series'];

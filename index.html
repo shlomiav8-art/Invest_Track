@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>InvestTrack – תיק השקעות אישי</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- iOS standalone -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="InvestTrack" />
+  <meta name="theme-color" content="#0b1220" />
+
+  <!-- Chart.js (defer כדי שלא "ישבור" את הטעינה) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg-main: #0b1220;
+      --bg-card: #111827;
+      --border-subtle: #1f2937;
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --accent: #22c55e;
+      --danger: #f97373;
+      --primary: #22c55e;
+      --tab-border: #1f2937;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; background: radial-gradient(circle at top left, #1f2937, #020617 55%); color: var(--text-main); }
+    header {
+      background: linear-gradient(135deg, #0f172a, #020617);
+      color: #f9fafb;
+      padding: 14px 16px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .logo-circle {
+      width: 32px; height: 32px; border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #4ade80, #22c55e 40%, #16a34a 70%, #14532d 100%);
+      display: flex; align-items: center; justify-content: center;
+      color: #e5fdf5; font-size: 18px; font-weight: 700;
+      box-shadow: 0 0 24px rgba(34, 197, 94, 0.7);
+    }
+    .header-titles { display:flex; flex-direction:column; }
+    .app-name { font-weight:600; font-size:16px; }
+    .app-subtitle { font-size:11px; color:#9ca3af; }
+    .header-actions { display:flex; align-items:center; gap:8px; }
+
+    .btn {
+      padding: 8px 14px; border-radius: 999px; border: none;
+      font-size: 13px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #022c22; font-weight: 600; box-shadow: 0 0 18px rgba(34, 197, 94, 0.4); }
+    .btn-ghost { background: rgba(15, 23, 42, 0.9); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.4); }
+    .btn-secondary { background: #1f2937; color: #e5e7eb; border: 1px solid #374151; }
+    .btn-danger { background: #7f1d1d; color: #fee2e2; border: 1px solid #b91c1c; }
+    .btn-small { padding: 4px 8px; font-size: 11px; border-radius: 999px; }
+    .btn:disabled { opacity:.5; cursor:default; box-shadow:none; }
+
+    .icon-circle {
+      width: 18px; height: 18px; border-radius: 999px;
+      display:inline-flex; align-items:center; justify-content:center;
+      font-size:11px; background: rgba(15,23,42,0.9); color: var(--accent);
+    }
+
+    .container { padding: 12px 10px 18px; max-width: 960px; margin: 0 auto; }
+
+    /* שורת שגיאה במקום "מסך שחור" */
+    .error-bar {
+      display:none;
+      margin: 10px 10px 0;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(127, 29, 29, 0.55);
+      border: 1px solid rgba(185, 28, 28, 0.8);
+      color: #fee2e2;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+    .error-bar.show { display:block; }
+
+    .tabs {
+      display:flex; border-radius:999px; background: rgba(15,23,42,0.9);
+      padding:3px; border:1px solid var(--tab-border); margin-bottom:12px;
+    }
+    .tab {
+      flex:1; padding:7px 10px; text-align:center; font-size:13px;
+      cursor:pointer; border-radius:999px; color:#9ca3af; transition: all .15s;
+    }
+    .tab.active { font-weight:600; background:#020617; color:#e5e7eb; box-shadow:0 0 12px rgba(15,23,42,0.9); }
+
+    .screen { display:none; margin-top:8px; }
+    .screen.active { display:block; }
+
+    .dashboard-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:12px; }
+    @media(min-width:720px){ .dashboard-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+
+    .card {
+      background: rgba(15,23,42,0.96);
+      border-radius:16px;
+      padding:10px 11px;
+      margin-bottom:10px;
+      box-shadow:0 10px 40px rgba(15,23,42,0.7);
+      border:1px solid rgba(55,65,81,0.7);
+    }
+
+    .card-title-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+    .card-title { font-weight:500; font-size:13px; color:#d1d5db; }
+    .card-subtitle { font-size:11px; color:var(--text-muted); margin-bottom:4px; }
+
+    .metric-label { font-size:11px; color:var(--text-muted); }
+    .metric-value { font-size:16px; font-weight:600; margin-top:4px; }
+    .metric-positive { color:#4ade80; }
+    .metric-negative { color:#fca5a5; }
+    .metric-neutral { color:#e5e7eb; }
+
+    .badge-icon {
+      width:34px; height:34px; border-radius:999px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:18px; background: rgba(15,23,42,0.9); color:#f9fafb;
+    }
+    .badge-icon.money { border:1px solid rgba(52,211,153,0.8); color:#bbf7d0; }
+    .badge-icon.savings { border:1px solid rgba(250,204,21,0.9); color:#facc15; }
+    .badge-icon.trend { border:1px solid rgba(52,211,153,0.7); color:#6ee7b7; }
+    .badge-icon.xirr { border:1px solid rgba(96,165,250,0.7); color:#bfdbfe; }
+
+    .section-title {
+      font-size:13px; font-weight:500; margin:4px 2px 6px; color:#e5e7eb;
+      display:flex; align-items:center; gap:6px;
+    }
+    .section-title span.icon {
+      width:18px; height:18px; border-radius:999px; background:#0f172a;
+      display:inline-flex; align-items:center; justify-content:center; font-size:11px; color:#38bdf8;
+    }
+
+    label { font-size:12px; color:var(--text-muted); }
+    input, select, textarea {
+      width:100%; padding:7px 9px; margin:4px 0 8px;
+      border-radius:10px; border:1px solid var(--border-subtle);
+      font-size:13px; background:#020617; color:var(--text-main); outline:none;
+    }
+    input::placeholder, textarea::placeholder { color:#6b7280; }
+    input:focus, select:focus, textarea:focus { border-color:#38bdf8; box-shadow:0 0 0 1px rgba(56,189,248,0.5); }
+
+    table { width:100%; border-collapse:collapse; font-size:12px; margin-top:4px; }
+    th, td { padding:5px 4px; border-bottom:1px solid rgba(31,41,55,0.9); text-align:center; color:#e5e7eb; }
+    th {
+      background:#020617; font-weight:500; font-size:11px; color:#9ca3af;
+      position:sticky; top:0; z-index:1;
+    }
+    tr:nth-child(even) td { background:rgba(15,23,42,0.8); }
+
+    .small { font-size:11px; color:var(--text-muted); }
+    .flex-row { display:flex; gap:6px; }
+    .flex-1 { flex:1; }
+    canvas { max-width:100%; }
+
+    .tag {
+      display:inline-block; padding:2px 6px; border-radius:999px;
+      background:rgba(15,23,42,0.85); color:#93c5fd; font-size:11px;
+      margin-left:4px; border:1px solid rgba(37,99,235,0.6);
+    }
+
+    .checkbox-row { display:flex; align-items:flex-start; gap:8px; margin-top:8px; font-size:12px; color:var(--text-muted); }
+    .checkbox-row input[type="checkbox"] { width:auto; margin-top:3px; }
+
+    .pill {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:3px 8px; border-radius:999px;
+      background:rgba(15,23,42,0.9); border:1px solid rgba(55,65,81,0.9);
+      font-size:11px; color:#9ca3af;
+    }
+
+    .edit-indicator { display:none; margin-top:4px; font-size:11px; color:#facc15; }
+    .edit-indicator.active { display:flex; align-items:center; gap:6px; }
+  </style>
+</head>
+
+<body>
+<div id="errorBar" class="error-bar"></div>
+
+<header>
+  <div class="header-left">
+    <div class="logo-circle">₮</div>
+    <div class="header-titles">
+      <div class="app-name">InvestTrack</div>
+      <div class="app-subtitle">Portfolio Manager • Local Only</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost" id="btnExportTop">
+      <span class="icon-circle">⇩</span> גיבוי
+    </button>
+    <button class="btn btn-primary" id="btnAddInvestmentTop">
+      <span class="icon-circle">＋</span> הוסף עסקה
+    </button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" data-screen="portfolio">תיק</div>
+    <div class="tab" data-screen="trades">עסקאות</div>
+    <div class="tab" data-screen="dividends">דיבידנדים</div>
+    <div class="tab" data-screen="settings">הגדרות</div>
+  </div>
+
+  <!-- PORTFOLIO -->
+  <div class="screen active" id="screen-portfolio">
+    <div class="dashboard-grid">
+      <div class="card">
+        <div class="card-title-row">
+          <div>
+            <div class="metric-label">Total Value</div>
+            <div class="metric-value metric-neutral" id="portfolioValue"></div>
+          </div>
+          <div class="badge-icon money">💹</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div>
+            <div class="metric-label">Total Invested</div>
+            <div class="metric-value metric-neutral" id="portfolioInvested"></div>
+          </div>
+          <div class="badge-icon savings">💰</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div>
+            <div class="metric-label">Total Gain / Loss</div>
+            <div class="metric-value" id="portfolioPL"></div>
+          </div>
+          <div class="badge-icon trend">📈</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div>
+            <div class="metric-label">Return &amp; XIRR</div>
+            <div class="metric-value" id="portfolioReturn"></div>
+          </div>
+          <div class="badge-icon xirr">𝑟</div>
+        </div>
+        <div class="small">XIRR: <span id="portfolioXirr"></span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title-row">
+          <div>
+            <div class="metric-label">Total Dividends</div>
+            <div class="metric-value metric-positive" id="portfolioDividends"></div>
+          </div>
+          <div class="badge-icon savings">💵</div>
+        </div>
+        <div class="small">סך כל הדיבידנדים / קופונים שנקלטו במערכת, מומר למטבע הבסיס.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title-row">
+        <div class="card-title">Portfolio Overview</div>
+        <span class="pill">Base Currency: <span id="baseCurrencyLabel"></span></span>
+      </div>
+      <div class="card-subtitle">
+        מחושב לפי כל העסקאות והדיבידנדים בתוספת שווי שוק נוכחי של הפוזיציות.
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+        <button class="btn btn-secondary" id="btnRecalc">רענן חישובים</button>
+        <button class="btn btn-secondary" id="btnUpdatePrices">עדכן מחירי שוק (Alpha Vantage)</button>
+      </div>
+      <div class="small" id="onlineQuotesStatus" style="margin-top:6px;"></div>
+    </div>
+
+    <div class="section-title"><span class="icon">📊</span> Your Positions</div>
+    <div class="card">
+      <table id="positionsTable">
+        <thead>
+        <tr>
+          <th>נייר</th>
+          <th>כמות</th>
+          <th>מטבע</th>
+          <th>מחיר אחרון</th>
+          <th>שווי (בסיס)</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="small" style="margin-top:6px;">מחיר אחרון = עסקה אחרונה או ערך מ-Alpha Vantage (אם עדכון אונליין מופעל).</div>
+    </div>
+
+    <div class="section-title"><span class="icon">🧩</span> Allocation by Symbol</div>
+    <div class="card">
+      <canvas id="allocationChart" height="190"></canvas>
+      <div class="small" id="chartFallback" style="margin-top:8px; display:none;">
+        ⚠️ Chart.js לא נטען (למשל אין אינטרנט ב-PWA). האפליקציה תמשיך לעבוד בלי הגרף.
+      </div>
+    </div>
+  </div>
+
+  <!-- TRADES -->
+  <div class="screen" id="screen-trades">
+    <div class="section-title"><span class="icon">➕</span> הוספת / עריכת עסקה</div>
+    <div class="card">
+      <form id="tradeForm">
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>סוג עסקה</label>
+            <select id="tradeType" required>
+              <option value="buy">קנייה</option>
+              <option value="sell">מכירה</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <label>סימול (Ticker)</label>
+            <input id="tradeSymbol" required placeholder="למשל: AAPL" />
+          </div>
+        </div>
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>כמות</label>
+            <input id="tradeQty" type="number" step="0.0001" required />
+          </div>
+          <div class="flex-1">
+            <label>מחיר ליחידה</label>
+            <input id="tradePrice" type="number" step="0.0001" required />
+          </div>
+        </div>
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>מטבע הנייר</label>
+            <input id="tradeCurrency" placeholder="USD / ILS / EUR" required />
+          </div>
+          <div class="flex-1">
+            <label>עמלה</label>
+            <input id="tradeFee" type="number" step="0.01" value="0" />
+          </div>
+        </div>
+        <label>תאריך עסקה</label>
+        <input id="tradeDate" type="date" required />
+
+        <button type="submit" class="btn btn-primary" id="btnSaveTrade" style="margin-top:4px;">שמור עסקה</button>
+        <button type="button" class="btn btn-secondary btn-small" id="btnCancelEditTrade" style="margin-top:4px; margin-right:6px; display:none;">ביטול עריכה</button>
+
+        <div id="editTradeIndicator" class="edit-indicator">מצב עריכה פעיל – כל שמירה תעדכן את העסקה הנבחרת.</div>
+      </form>
+    </div>
+
+    <div class="section-title"><span class="icon">📜</span> רשימת עסקאות</div>
+    <div class="card">
+      <div class="card-title-row">
+        <div class="card-title">עסקאות</div>
+        <span class="tag" id="tradesCountTag"></span>
+      </div>
+      <table id="tradesTable">
+        <thead>
+        <tr>
+          <th>תאריך</th><th>סוג</th><th>נייר</th><th>כמות</th><th>מחיר</th><th>מטבע</th><th>עמלה</th><th>עריכה</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button id="btnClearTrades" class="btn btn-danger" style="margin-top:8px;">מחק את כל העסקאות</button>
+      <div class="small">⚠️ לא ניתן לבטל – מוחק מהאחסון המקומי.</div>
+    </div>
+  </div>
+
+  <!-- DIVIDENDS -->
+  <div class="screen" id="screen-dividends">
+    <div class="section-title"><span class="icon">💰</span> הוספת דיבידנד / קופון ידני</div>
+    <div class="card">
+      <form id="dividendForm">
+        <label>נייר</label>
+        <input id="divSymbol" placeholder="למשל: AAPL" required />
+        <div class="flex-row">
+          <div class="flex-1">
+            <label>סכום</label>
+            <input id="divAmount" type="number" step="0.01" required />
+          </div>
+          <div class="flex-1">
+            <label>מטבע</label>
+            <input id="divCurrency" placeholder="USD / ILS / EUR" required />
+          </div>
+        </div>
+        <label>תאריך קבלה</label>
+        <input id="divDate" type="date" required />
+        <button type="submit" class="btn btn-primary" style="margin-top:4px;">שמור דיבידנד</button>
+      </form>
+    </div>
+
+    <div class="section-title"><span class="icon">⚙️</span> ייבוא אוטומטי מ-Alpha Vantage</div>
+    <div class="card">
+      <div class="card-subtitle">
+        ייבוא דיבידנדים היסטוריים לפי סימול באמצעות Alpha Vantage.
+        הנתונים נשמרים מקומית בלבד. יש מגבלת קריאות (5 לדקה / 500 ביום).
+      </div>
+      <div class="flex-row">
+        <div class="flex-1">
+          <label>סימול (Ticker)</label>
+          <input id="importDivSymbolAv" placeholder="למשל: AAPL" />
+        </div>
+        <div class="flex-1">
+          <label>טווח זמן</label>
+          <select id="importDivYearsAv">
+            <option value="1">שנה אחרונה</option>
+            <option value="3">3 שנים</option>
+            <option value="5">5 שנים</option>
+            <option value="10">10 שנים</option>
+          </select>
+        </div>
+      </div>
+      <button id="btnImportDivAlpha" class="btn btn-secondary" style="margin-top:4px;">ייבא דיבידנדים מ-Alpha Vantage</button>
+      <div class="small" style="margin-top:6px;">
+        מתבסס על <code>TIME_SERIES_MONTHLY_ADJUSTED</code>.<br/>
+        מובאים רק דיבידנדים שנמצאים בתוך תקופות ההחזקה בפועל (לפי העסקאות) והם מוכפלים בכמות המניות שהחזקת באותו תאריך.
+      </div>
+    </div>
+
+    <div class="section-title"><span class="icon">📜</span> רשימת דיבידנדים / קופונים</div>
+    <div class="card">
+      <div class="card-title-row">
+        <div class="card-title">דיבידנדים</div>
+        <span class="tag" id="divCountTag"></span>
+      </div>
+      <table id="divTable">
+        <thead>
+        <tr><th>תאריך</th><th>נייר</th><th>סכום</th><th>מטבע</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button id="btnClearDividends" class="btn btn-danger" style="margin-top:8px;">מחק את כל הדיבידנדים</button>
+      <div class="small">⚠️ לא ניתן לבטל – מוחק מהאחסון המקומי.</div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="screen" id="screen-settings">
+    <div class="section-title"><span class="icon">🧭</span> הגדרות מטבע ושערי המרה</div>
+    <div class="card">
+      <label>מטבע בסיס</label>
+      <input id="baseCurrencyInput" placeholder="ILS / USD / EUR" />
+      <div class="small" style="margin-top:6px;">
+        שערי המרה (כמה שווה 1 יחידת מטבע במטבע הבסיס).<br/>
+        לדוגמה: אם בסיס = ILS ו-USD = 3.7 – אז כל 1 דולר = 3.7 ש"ח.
+      </div>
+      <div id="fxRatesContainer" style="margin-top:8px;"></div>
+
+      <button id="btnAddCurrency" class="btn btn-secondary" style="margin-top:8px;">הוסף מטבע</button>
+      <button id="btnSaveSettings" class="btn btn-primary" style="margin-top:8px;">שמור הגדרות</button>
+
+      <div class="checkbox-row">
+        <input id="enableOnlineQuotes" type="checkbox" />
+        <label for="enableOnlineQuotes">אפשר עדכון מחירי שוק אונליין (שימוש ב-Alpha Vantage). נשלחים רק סימולים ו-API key, ללא כמויות/שווי תיק.</label>
+      </div>
+
+      <label style="margin-top:6px;">Alpha Vantage API Key</label>
+      <input id="alphaVantageKey" placeholder="הדבק כאן את ה-API key שלך" />
+      <div class="small">לדוגמה: FYIUASHZYNHG80F1</div>
+    </div>
+
+    <div class="section-title"><span class="icon">🛟</span> גיבוי / שחזור נתונים</div>
+    <div class="card">
+      <button id="btnExport" class="btn btn-secondary" style="margin-bottom:6px;">ייצא JSON</button>
+      <div class="small">יוצר טקסט JSON של כל הנתונים (עסקאות, דיבידנדים, הגדרות) שאפשר לשמור בקובץ חיצוני.</div>
+      <textarea id="exportArea" rows="6" style="margin-top:8px;"></textarea>
+      <button id="btnImport" class="btn btn-primary" style="margin-top:6px;">ייבא JSON</button>
+      <div class="small">אזהרה: ייבוא ישכתב את הנתונים הקיימים.</div>
+    </div>
+
+    <div class="section-title"><span class="icon">🔒</span> פרטיות</div>
+    <div class="card">
+      <div class="small">
+        • כל המידע נשמר ב-localStorage בדפדפן בלבד.<br/>
+        • כאשר עדכון מחירי שוק כבוי – אין יציאה לאינטרנט בכלל.<br/>
+        • כאשר הוא פעיל – נשלחים ל-Alpha Vantage רק סימולים ו-API key שלך.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const errorBar = document.getElementById('errorBar');
+  function showErr(msg) {
+    errorBar.textContent = msg;
+    errorBar.classList.add('show');
+  }
+  window.addEventListener('error', (e) => showErr('JS Error: ' + (e.message || e.error || e)));
+  window.addEventListener('unhandledrejection', (e) => showErr('Promise Error: ' + (e.reason?.message || e.reason || e)));
+
+  const STORAGE_KEY = 'invest_app_state_v4';
+
+  let state = {
+    trades: [],
+    dividends: [],
+    settings: {
+      baseCurrency: 'ILS',
+      fxRates: { ILS: 1, USD: 3.7, EUR: 4.0 },
+      enableOnlineQuotes: false,
+      alphaVantageKey: ''
+    },
+    lastPrices: {}
+  };
+
+  let currentEditTradeId = null;
+  let allocationChart = null;
+
+  function loadState() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        const saved = JSON.parse(raw);
+        state = Object.assign(state, saved);
+        state.settings = Object.assign({
+          baseCurrency: 'ILS',
+          fxRates: { ILS: 1 },
+          enableOnlineQuotes: false,
+          alphaVantageKey: ''
+        }, state.settings || {});
+      } catch (e) {
+        console.error('Error loading state', e);
+        showErr('Error loading state: ' + (e.message || e));
+      }
+    }
+  }
+
+  function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+  // Tabs
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const screenName = tab.dataset.screen;
+      document.querySelectorAll('.screen').forEach(s => {
+        s.classList.toggle('active', s.id === 'screen-' + screenName);
+      });
+    });
+  });
+
+  function getFxRate(currency) {
+    const base = state.settings.baseCurrency;
+    if (currency === base) return 1;
+    const fxRates = state.settings.fxRates || {};
+    const r = fxRates[currency];
+    if (typeof r === 'number' && !isNaN(r) && r > 0) return r;
+    return 1;
+  }
+
+  function amountToBase(amount, currency) { return amount * getFxRate(currency); }
+
+  function buildPositions() {
+    const map = {};
+    state.trades.forEach(tr => {
+      const key = tr.symbol.toUpperCase();
+      if (!map[key]) {
+        map[key] = { symbol: key, currency: tr.currency, qty: 0, lastPrice: tr.price, lastPriceSource: 'trade', lastPriceDate: tr.date };
+      }
+      const p = map[key];
+      const signedQty = (tr.type === 'buy' ? 1 : -1) * Number(tr.qty);
+      p.qty += signedQty;
+
+      if (tr.date >= p.lastPriceDate) {
+        p.lastPrice = tr.price;
+        p.lastPriceDate = tr.date;
+        p.currency = tr.currency;
+      }
+
+      if (state.lastPrices[key]) {
+        p.lastPrice = state.lastPrices[key].price;
+        p.currency = state.lastPrices[key].currency;
+        p.lastPriceSource = 'api';
+        p.lastPriceDate = state.lastPrices[key].updatedAt;
+      }
+    });
+    return Object.values(map);
+  }
+
+  function computeCashFlowsAndSummary() {
+    const flows = [];
+    let totalBuysBase = 0;
+    let totalSellsBase = 0;
+    let totalDividendsBase = 0;
+    let totalFeesBase = 0;
+
+    state.trades.forEach(tr => {
+      const qty = Number(tr.qty);
+      const price = Number(tr.price);
+      const fee = Number(tr.fee || 0);
+      const amount = qty * price;
+      const amountBase = amountToBase(amount, tr.currency);
+      const feeBase = amountToBase(fee, tr.currency);
+      const dateStr = tr.date;
+
+      let cashBase;
+      if (tr.type === 'buy') {
+        cashBase = -(amountBase + feeBase);
+        totalBuysBase += amountBase;
+      } else {
+        cashBase = (amountBase - feeBase);
+        totalSellsBase += amountBase;
+      }
+      totalFeesBase += feeBase;
+      flows.push({ date: dateStr, amount: cashBase });
+    });
+
+    state.dividends.forEach(d => {
+      const amt = Number(d.amount);
+      const amtBase = amountToBase(amt, d.currency);
+      totalDividendsBase += amtBase;
+      flows.push({ date: d.date, amount: amtBase });
+    });
+
+    const positions = buildPositions();
+    let marketValueBase = 0;
+    positions.forEach(p => {
+      const value = Number(p.qty) * Number(p.lastPrice || 0);
+      marketValueBase += amountToBase(value, p.currency);
+    });
+
+    const todayIso = new Date().toISOString().slice(0,10);
+    if (marketValueBase !== 0) flows.push({ date: todayIso, amount: marketValueBase });
+
+    const profitBase = (marketValueBase + totalSellsBase + totalDividendsBase) - (totalBuysBase + totalFeesBase);
+    const netInvestedBase = (totalBuysBase + totalFeesBase) - (totalSellsBase + totalDividendsBase);
+
+    return { flows, profitBase, marketValueBase, netInvestedBase, totalDividendsBase, totalBuysBase, totalSellsBase };
+  }
+
+  function xirr(cashFlows) {
+    if (!cashFlows || cashFlows.length < 2) return null;
+    cashFlows = cashFlows.slice().sort((a,b) => a.date.localeCompare(b.date));
+    const day0 = new Date(cashFlows[0].date);
+    const values = cashFlows.map(cf => cf.amount);
+    const times = cashFlows.map(cf => (new Date(cf.date) - day0) / (1000*60*60*24) / 365.0);
+
+    function npv(rate) {
+      let sum = 0;
+      for (let i=0;i<values.length;i++) sum += values[i] / Math.pow(1+rate, times[i]);
+      return sum;
+    }
+    function dNpv(rate) {
+      let sum = 0;
+      for (let i=0;i<values.length;i++) sum += -times[i] * values[i] / Math.pow(1+rate, times[i]+1);
+      return sum;
+    }
+
+    let guess = 0.1;
+    for (let i=0;i<100;i++) {
+      const f = npv(guess);
+      const df = dNpv(guess);
+      if (Math.abs(df) < 1e-12) break;
+      const newGuess = guess - f/df;
+      if (Math.abs(newGuess-guess) < 1e-6) { guess = newGuess; break; }
+      guess = newGuess;
+    }
+    if (!isFinite(guess) || guess < -0.9999) return null;
+    return guess;
+  }
+
+  function renderPortfolio() {
+    document.getElementById('baseCurrencyLabel').textContent = state.settings.baseCurrency;
+
+    const { flows, profitBase, marketValueBase, netInvestedBase, totalDividendsBase, totalBuysBase } =
+      computeCashFlowsAndSummary();
+
+    const base = state.settings.baseCurrency;
+
+    document.getElementById('portfolioValue').textContent = marketValueBase.toFixed(2) + ' ' + base;
+    document.getElementById('portfolioInvested').textContent = totalBuysBase.toFixed(2) + ' ' + base;
+
+    const plEl = document.getElementById('portfolioPL');
+    const plStr = profitBase.toFixed(2) + ' ' + base;
+    if (profitBase > 0) {
+      plEl.textContent = '+' + plStr;
+      plEl.classList.remove('metric-negative');
+      plEl.classList.add('metric-positive');
+    } else if (profitBase < 0) {
+      plEl.textContent = plStr;
+      plEl.classList.remove('metric-positive');
+      plEl.classList.add('metric-negative');
+    } else {
+      plEl.textContent = plStr;
+      plEl.classList.remove('metric-positive','metric-negative');
+      plEl.classList.add('metric-neutral');
+    }
+
+    const retEl = document.getElementById('portfolioReturn');
+    if (netInvestedBase > 0) {
+      const pct = (profitBase / netInvestedBase) * 100;
+      retEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + ' %';
+      retEl.classList.toggle('metric-positive', pct >= 0);
+      retEl.classList.toggle('metric-negative', pct < 0);
+    } else {
+      retEl.textContent = '-';
+      retEl.classList.remove('metric-positive','metric-negative');
+      retEl.classList.add('metric-neutral');
+    }
+
+    const rate = xirr(flows);
+    document.getElementById('portfolioXirr').textContent = rate === null ? '-' : (rate * 100).toFixed(2) + ' %';
+
+    const divEl = document.getElementById('portfolioDividends');
+    if (divEl) divEl.textContent = totalDividendsBase.toFixed(2) + ' ' + base;
+
+    const positions = buildPositions();
+    const tbody = document.querySelector('#positionsTable tbody');
+    tbody.innerHTML = '';
+    positions.forEach(p => {
+      const tr = document.createElement('tr');
+      const valueBase = amountToBase(p.qty * p.lastPrice, p.currency);
+      tr.innerHTML = `
+        <td>${p.symbol}</td>
+        <td>${p.qty.toFixed(4)}</td>
+        <td>${p.currency}</td>
+        <td>${p.lastPrice ? p.lastPrice.toFixed(4) : '-'}</td>
+        <td>${valueBase.toFixed(2)} ${base}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const labels = [];
+    const data = [];
+    positions.forEach(p => {
+      const valBase = amountToBase(p.qty * p.lastPrice, p.currency);
+      if (Math.abs(valBase) > 0.01) { labels.push(p.symbol); data.push(valBase); }
+    });
+
+    const statusEl = document.getElementById('onlineQuotesStatus');
+    statusEl.textContent = state.settings.enableOnlineQuotes
+      ? 'עדכון מחירי שוק אונליין: פעיל (Alpha Vantage).'
+      : 'עדכון מחירי שוק אונליין: כבוי (אין יציאה לאינטרנט).';
+
+    // גרף: אם Chart.js לא נטען, לא נופלים
+    const chartFallback = document.getElementById('chartFallback');
+    if (typeof window.Chart !== 'function') {
+      chartFallback.style.display = 'block';
+      return;
+    }
+    chartFallback.style.display = 'none';
+
+    const canvas = document.getElementById('allocationChart');
+    const ctx = canvas.getContext('2d');
+    if (allocationChart) allocationChart.destroy();
+    allocationChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data }] },
+      options: {
+        plugins: {
+          legend: { position:'bottom', labels:{ color:'#e5e7eb', font:{ size:11 } } }
+        }
+      }
+    });
+  }
+
+  function renderTrades() {
+    const tbody = document.querySelector('#tradesTable tbody');
+    tbody.innerHTML = '';
+    const sorted = state.trades.slice().sort((a,b) => a.date.localeCompare(b.date));
+    sorted.forEach(tr => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${tr.date}</td>
+        <td>${tr.type === 'buy' ? 'קנייה' : 'מכירה'}</td>
+        <td>${tr.symbol.toUpperCase()}</td>
+        <td>${Number(tr.qty).toFixed(4)}</td>
+        <td>${Number(tr.price).toFixed(4)}</td>
+        <td>${tr.currency}</td>
+        <td>${Number(tr.fee || 0).toFixed(2)}</td>
+        <td><button class="btn btn-secondary btn-small" data-edit-id="${tr.id}">✏️</button></td>
+      `;
+      tbody.appendChild(row);
+    });
+    document.getElementById('tradesCountTag').textContent = sorted.length + ' עסקאות';
+
+    tbody.querySelectorAll('button[data-edit-id]').forEach(btn => {
+      btn.addEventListener('click', () => startEditTrade(btn.getAttribute('data-edit-id')));
+    });
+  }
+
+  function renderDividends() {
+    const tbody = document.querySelector('#divTable tbody');
+    tbody.innerHTML = '';
+    const sorted = state.dividends.slice().sort((a,b) => a.date.localeCompare(b.date));
+    sorted.forEach(d => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${d.date}</td>
+        <td>${d.symbol.toUpperCase()}</td>
+        <td>${Number(d.amount).toFixed(2)}</td>
+        <td>${d.currency}</td>
+      `;
+      tbody.appendChild(row);
+    });
+    document.getElementById('divCountTag').textContent = sorted.length + ' רשומות';
+  }
+
+  function renderSettings() {
+    document.getElementById('baseCurrencyInput').value = state.settings.baseCurrency || 'ILS';
+
+    const container = document.getElementById('fxRatesContainer');
+    container.innerHTML = '';
+    const fx = state.settings.fxRates || {};
+    Object.keys(fx).forEach(curr => {
+      const row = document.createElement('div');
+      row.className = 'flex-row';
+      row.style.marginBottom = '4px';
+      row.innerHTML = `
+        <div class="flex-1"><input data-fx-currency placeholder="מטבע" value="${curr}" /></div>
+        <div class="flex-1"><input data-fx-rate type="number" step="0.0001" placeholder="שער" value="${fx[curr]}" /></div>
+      `;
+      container.appendChild(row);
+    });
+
+    document.getElementById('enableOnlineQuotes').checked = !!state.settings.enableOnlineQuotes;
+    document.getElementById('alphaVantageKey').value = state.settings.alphaVantageKey || '';
+  }
+
+  function setDefaultDates() {
+    const today = new Date().toISOString().slice(0,10);
+    const tradeDate = document.getElementById('tradeDate');
+    const divDate = document.getElementById('divDate');
+    if (tradeDate && !tradeDate.value) tradeDate.value = today;
+    if (divDate && !divDate.value) divDate.value = today;
+  }
+
+  // Trade form + edit
+  function resetTradeForm() {
+    document.getElementById('tradeForm').reset();
+    currentEditTradeId = null;
+    document.getElementById('btnSaveTrade').textContent = 'שמור עסקה';
+    document.getElementById('editTradeIndicator').classList.remove('active');
+    document.getElementById('btnCancelEditTrade').style.display = 'none';
+    setDefaultDates();
+  }
+
+  function startEditTrade(id) {
+    const tr = state.trades.find(t => t.id === id);
+    if (!tr) return;
+    currentEditTradeId = id;
+
+    document.getElementById('tradeType').value = tr.type;
+    document.getElementById('tradeSymbol').value = tr.symbol;
+    document.getElementById('tradeQty').value = tr.qty;
+    document.getElementById('tradePrice').value = tr.price;
+    document.getElementById('tradeCurrency').value = tr.currency;
+    document.getElementById('tradeFee').value = tr.fee || 0;
+    document.getElementById('tradeDate').value = tr.date;
+
+    document.getElementById('btnSaveTrade').textContent = 'עדכן עסקה';
+    document.getElementById('editTradeIndicator').classList.add('active');
+    document.getElementById('btnCancelEditTrade').style.display = 'inline-flex';
+
+    tabs.forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab[data-screen="trades"]').classList.add('active');
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-trades'));
+  }
+
+  document.getElementById('tradeForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const type = document.getElementById('tradeType').value;
+    const symbol = document.getElementById('tradeSymbol').value.trim();
+    const qty = Number(document.getElementById('tradeQty').value);
+    const price = Number(document.getElementById('tradePrice').value);
+    const currency = document.getElementById('tradeCurrency').value.trim() || state.settings.baseCurrency;
+    const fee = Number(document.getElementById('tradeFee').value || 0);
+    const date = document.getElementById('tradeDate').value;
+
+    if (!symbol || !date || !qty || !price) return;
+
+    if (!currentEditTradeId) {
+      state.trades.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2), type, symbol, qty, price, currency, fee, date });
+    } else {
+      const idx = state.trades.findIndex(t => t.id === currentEditTradeId);
+      if (idx >= 0) state.trades[idx] = { id: currentEditTradeId, type, symbol, qty, price, currency, fee, date };
+    }
+
+    saveState();
+    renderTrades();
+    renderPortfolio();
+    resetTradeForm();
+  });
+
+  document.getElementById('btnCancelEditTrade').addEventListener('click', resetTradeForm);
+
+  document.getElementById('btnClearTrades').addEventListener('click', () => {
+    if (confirm('למחוק את כל העסקאות? זה בלתי הפיך.')) {
+      state.trades = [];
+      saveState();
+      renderTrades();
+      renderPortfolio();
+      resetTradeForm();
+    }
+  });
+
+  // Dividends manual
+  document.getElementById('dividendForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const symbol = document.getElementById('divSymbol').value.trim();
+    const amount = Number(document.getElementById('divAmount').value);
+    const currency = document.getElementById('divCurrency').value.trim() || state.settings.baseCurrency;
+    const date = document.getElementById('divDate').value;
+    if (!symbol || !date || !amount) return;
+
+    state.dividends.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2), symbol, amount, currency, date });
+    saveState();
+    renderDividends();
+    renderPortfolio();
+    e.target.reset();
+    setDefaultDates();
+  });
+
+  document.getElementById('btnClearDividends').addEventListener('click', () => {
+    if (confirm('למחוק את כל רשומות הדיבידנד?')) {
+      state.dividends = [];
+      saveState();
+      renderDividends();
+      renderPortfolio();
+    }
+  });
+
+  // Settings
+  document.getElementById('btnAddCurrency').addEventListener('click', () => {
+    const container = document.getElementById('fxRatesContainer');
+    const row = document.createElement('div');
+    row.className = 'flex-row';
+    row.style.marginBottom = '4px';
+    row.innerHTML = `
+      <div class="flex-1"><input data-fx-currency placeholder="מטבע" /></div>
+      <div class="flex-1"><input data-fx-rate type="number" step="0.0001" placeholder="שער" /></div>
+    `;
+    container.appendChild(row);
+  });
+
+  document.getElementById('btnSaveSettings').addEventListener('click', () => {
+    const base = (document.getElementById('baseCurrencyInput').value || '').trim() || 'ILS';
+    state.settings.baseCurrency = base;
+
+    const fx = {};
+    document.querySelectorAll('#fxRatesContainer .flex-row').forEach(r => {
+      const c = (r.querySelector('[data-fx-currency]').value || '').trim();
+      const rate = Number(r.querySelector('[data-fx-rate]').value);
+      if (c && rate > 0) fx[c] = rate;
+    });
+    fx[base] = 1;
+    state.settings.fxRates = fx;
+
+    state.settings.enableOnlineQuotes = !!document.getElementById('enableOnlineQuotes').checked;
+    state.settings.alphaVantageKey = (document.getElementById('alphaVantageKey').value || '').trim();
+
+    saveState();
+    renderPortfolio();
+    alert('ההגדרות נשמרו.');
+  });
+
+  // Export / Import
+  document.getElementById('btnExport').addEventListener('click', () => {
+    document.getElementById('exportArea').value = JSON.stringify(state, null, 2);
+  });
+
+  document.getElementById('btnImport').addEventListener('click', () => {
+    const area = document.getElementById('exportArea');
+    try {
+      const newState = JSON.parse(area.value);
+      if (confirm('ייבוא ישכתב את כל הנתונים הקיימים. להמשיך?')) {
+        state = newState;
+        saveState();
+        renderAll();
+        alert('ייבוא הצליח.');
+      }
+    } catch (e) {
+      alert('JSON לא תקין');
+    }
+  });
+
+  document.getElementById('btnExportTop').addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab[data-screen="settings"]').classList.add('active');
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-settings'));
+    document.getElementById('exportArea').value = JSON.stringify(state, null, 2);
+  });
+
+  document.getElementById('btnAddInvestmentTop').addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab[data-screen="trades"]').classList.add('active');
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-trades'));
+  });
+
+  // ---- Alpha Vantage: prices ----
+  async function fetchQuote(symbol) {
+    if (!state.settings.enableOnlineQuotes) return null;
+    const apiKey = state.settings.alphaVantageKey;
+    if (!apiKey) return null;
+
+    const cleanSymbol = symbol.toUpperCase().trim();
+    if (!cleanSymbol) return null;
+
+    const url =
+      'https://www.alphavantage.co/query' +
+      '?function=GLOBAL_QUOTE' +
+      '&symbol=' + encodeURIComponent(cleanSymbol) +
+      '&apikey=' + encodeURIComponent(apiKey);
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const quote = data['Global Quote'];
+      if (!quote) return null;
+      const price = parseFloat(quote['05. price']);
+      if (!isFinite(price)) return null;
+      return { price, currency: 'USD' };
+    } catch (e) { return null; }
+  }
+
+  document.getElementById('btnUpdatePrices').addEventListener('click', async () => {
+    const positions = buildPositions();
+    if (positions.length === 0) { alert('אין פוזיציות פתוחות.'); return; }
+
+    if (!state.settings.enableOnlineQuotes) {
+      alert('עדכון מחירי שוק אונליין כבוי.\nגש להגדרות וסמן "אפשר עדכון מחירי שוק אונליין".');
+      return;
+    }
+    if (!state.settings.alphaVantageKey) {
+      alert('לא הוגדר API key ל-Alpha Vantage.\nגש להגדרות והדבק את המפתח שלך.');
+      return;
+    }
+
+    let updatedCount = 0;
+    for (const p of positions) {
+      const quote = await fetchQuote(p.symbol);
+      if (quote && typeof quote.price === 'number') {
+        state.lastPrices[p.symbol.toUpperCase()] = { price: quote.price, currency: quote.currency || p.currency, updatedAt: new Date().toISOString() };
+        updatedCount++;
+      }
+    }
+    saveState();
+    renderPortfolio();
+    alert('סיום עדכון מחירי שוק.\nעודכנו מחירים עבור ' + updatedCount + ' ניירות.');
+  });
+
+  document.getElementById('btnRecalc').addEventListener('click', renderPortfolio);
+
+  // ---- Alpha Vantage: dividends with holding-interval filter ----
+  function getHoldingIntervalsForSymbol(symbol) {
+    const clean = symbol.toUpperCase();
+    const trades = state.trades.filter(t => t.symbol.toUpperCase() === clean).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const intervals = [];
+    let cumQty = 0;
+    let currentStart = null;
+
+    trades.forEach(tr => {
+      const signedQty = (tr.type === 'buy' ? 1 : -1) * Number(tr.qty);
+      const prevCum = cumQty;
+      cumQty += signedQty;
+
+      if (prevCum <= 0 && cumQty > 0) currentStart = tr.date;
+      if (prevCum > 0 && cumQty <= 0 && currentStart) {
+        intervals.push({ start: currentStart, end: tr.date });
+        currentStart = null;
+      }
+    });
+
+    if (cumQty > 0 && currentStart) intervals.push({ start: currentStart, end: null });
+    return intervals;
+  }
+
+  function isDateWithinHoldingIntervals(dateStr, intervals) {
+    const d = new Date(dateStr);
+    return intervals.some(interval => {
+      const start = new Date(interval.start);
+      const end = interval.end ? new Date(interval.end) : new Date();
+      return d >= start && d <= end;
+    });
+  }
+
+  function getQuantityForSymbolOnDate(symbol, dateStr) {
+    const clean = symbol.toUpperCase();
+    const cutoff = dateStr;
+    let qty = 0;
+
+    state.trades
+      .filter(t => t.symbol.toUpperCase() === clean && t.date <= cutoff)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .forEach(tr => qty += (tr.type === 'buy' ? 1 : -1) * Number(tr.qty));
+
+    return qty;
+  }
+
+  async function importDividendsFromAlpha(symbol, yearsBack) {
+    if (!state.settings.enableOnlineQuotes) { alert('ייבוא דיבידנדים דורש שעדכון אונליין יהיה פעיל (מסומן בהגדרות).'); return 0; }
+    const apiKey = state.settings.alphaVantageKey;
+    if (!apiKey) { alert('לא מוגדר API key ל-Alpha Vantage בהגדרות.'); return 0; }
+
+    const cleanSymbol = symbol.toUpperCase().trim();
+    if (!cleanSymbol) return 0;
+
+    const holdingIntervals = getHoldingIntervalsForSymbol(cleanSymbol);
+    if (holdingIntervals.length === 0) { alert('לא נמצאו עסקאות עבור ' + cleanSymbol + ', לכן אין תקופת החזקה להצליב עם דיבידנדים.'); return 0; }
+
+    const url =
+      'https://www.alphavantage.co/query' +
+      '?function=TIME_SERIES_MONTHLY_ADJUSTED' +
+      '&symbol=' + encodeURIComponent(cleanSymbol) +
+      '&apikey=' + encodeURIComponent(apiKey);
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) { alert('שגיאה בקריאת דיבידנדים (status ' + res.status + ').'); return 0; }
+      const data = await res.json();
+      const series = data['Monthly Adjusted Time Series'];
+      if (!series) { alert('לא נמצאה סדרה עבור ' + cleanSymbol + '.'); return 0; }
+
+      const now = new Date();
+      const fromDate = new Date(now.getFullYear() - yearsBack, now.getMonth(), now.getDate());
+
+      const existingKeys = new Set(
+        state.dividends
+          .filter(d => d.symbol.toUpperCase() === cleanSymbol)
+          .map(d => cleanSymbol + '|' + d.date + '|' + Number(d.amount).toFixed(6))
+      );
+
+      let added = 0;
+
+      Object.entries(series).forEach(([dateStr, values]) => {
+        const d = new Date(dateStr);
+        if (d < fromDate) return;
+
+        const divPerShare = parseFloat(values['7. dividend amount']);
+        if (!isFinite(divPerShare) || divPerShare <= 0) return;
+
+        if (!isDateWithinHoldingIntervals(dateStr, holdingIntervals)) return;
+
+        const qtyHeld = getQuantityForSymbolOnDate(cleanSymbol, dateStr);
+        if (qtyHeld <= 0) return;
+
+        const totalAmount = divPerShare * qtyHeld;
+        const key = cleanSymbol + '|' + dateStr + '|' + totalAmount.toFixed(6);
+        if (existingKeys.has(key)) return;
+
+        state.dividends.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2), symbol: cleanSymbol, amount: totalAmount, currency: 'USD', date: dateStr });
+        existingKeys.add(key);
+        added++;
+      });
+
+      if (added > 0) { saveState(); renderDividends(); renderPortfolio(); }
+      return added;
+    } catch (e) {
+      alert('שגיאה בקריאת דיבידנדים (ראה Console).');
+      return 0;
+    }
+  }
+
+  document.getElementById('btnImportDivAlpha').addEventListener('click', async () => {
+    const symbol = document.getElementById('importDivSymbolAv').value;
+    const yearsBack = Number(document.getElementById('importDivYearsAv').value || '1');
+    if (!symbol) { alert('נא להזין סימול (Ticker).'); return; }
+    const added = await importDividendsFromAlpha(symbol, yearsBack);
+    alert(added === 0
+      ? ('לא נמצאו דיבידנדים חדשים לייבוא עבור ' + symbol.toUpperCase() + '.')
+      : ('יובאו ' + added + ' דיבידנדים חדשים עבור ' + symbol.toUpperCase() + '.')
+    );
+  });
+
+  function renderAll() { renderPortfolio(); renderTrades(); renderDividends(); renderSettings(); }
+
+  // Init
+  loadState();
+  setDefaultDates();
+
+  // חשוב: מחכים לטען סקריפטים (כולל Chart.js עם defer)
+  window.addEventListener('load', () => {
+    try { renderAll(); }
+    catch (e) { console.error(e); showErr('Render error: ' + (e.message || e)); }
+  });
+})();
+</script>
+
+</body>
+</html>

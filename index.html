@@ -278,6 +278,46 @@
       <div class="small" id="onlineQuotesStatus" style="margin-top:6px;"></div>
     </div>
 
+    <!-- Manual price update -->
+    <div class="section-title"><span class="icon">✍️</span> עדכון מחיר ידני (למשל ניירות ישראליים)</div>
+    <div class="card">
+      <div class="card-subtitle">
+        מאפשר להזין מחיר אחרון לנייר בלי לבצע קנייה/מכירה (נשמר מקומית בלבד).
+        שימושי במיוחד לניירות בת״א (כמו 5130513) שלא נתמכים ב-Alpha Vantage.
+      </div>
+
+      <div class="flex-row">
+        <div class="flex-1">
+          <label>סימול / מספר נייר</label>
+          <input id="manualPriceSymbol" placeholder="למשל: 5130513 או AAPL" />
+        </div>
+        <div class="flex-1">
+          <label>מחיר אחרון</label>
+          <input id="manualPriceValue" type="number" step="0.0001" placeholder="למשל: 123.45" />
+        </div>
+      </div>
+
+      <div class="flex-row">
+        <div class="flex-1">
+          <label>מטבע</label>
+          <input id="manualPriceCurrency" placeholder="ILS / USD / EUR" />
+        </div>
+        <div class="flex-1">
+          <label>תאריך (אופציונלי)</label>
+          <input id="manualPriceDate" type="date" />
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-primary" id="btnSaveManualPrice">שמור מחיר ידני</button>
+        <button class="btn btn-danger" id="btnDeleteManualPrice">מחק מחיר ידני לנייר</button>
+      </div>
+
+      <div class="small" style="margin-top:6px;">
+        טיפ: אפשר גם ללחוץ על שורה בטבלת הפוזיציות למטה כדי למלא אוטומטית את הסימול והמטבע כאן.
+      </div>
+    </div>
+
     <div class="section-title"><span class="icon">📊</span> Your Positions</div>
     <div class="card">
       <table id="positionsTable">
@@ -292,7 +332,7 @@
         </thead>
         <tbody></tbody>
       </table>
-      <div class="small" style="margin-top:6px;">מחיר אחרון = עסקה אחרונה או ערך מ-Alpha Vantage (אם עדכון אונליין מופעל).</div>
+      <div class="small" style="margin-top:6px;">מחיר אחרון = עסקה אחרונה / Alpha Vantage / מחיר ידני (לפי העדיפות).</div>
     </div>
 
     <div class="section-title"><span class="icon">🧩</span> Allocation by Symbol</div>
@@ -461,7 +501,7 @@
 
       <label style="margin-top:6px;">Alpha Vantage API Key</label>
       <input id="alphaVantageKey" placeholder="הדבק כאן את ה-API key שלך" />
-      <div class="small">לדוגמה: FY23DÑHZYSC13456</div>
+      <div class="small">לדוגמה: FYIUASHZYNHG80F1</div>
     </div>
 
     <div class="section-title"><span class="icon">🛟</span> גיבוי / שחזור נתונים</div>
@@ -523,6 +563,7 @@
           enableOnlineQuotes: false,
           alphaVantageKey: ''
         }, state.settings || {});
+        state.lastPrices = state.lastPrices || {};
       } catch (e) {
         console.error('Error loading state', e);
         showErr('Error loading state: ' + (e.message || e));
@@ -573,14 +614,17 @@
         p.currency = tr.currency;
       }
 
+      // lastPrices (manual/api) override
       if (state.lastPrices[key]) {
         p.lastPrice = state.lastPrices[key].price;
         p.currency = state.lastPrices[key].currency;
-        p.lastPriceSource = 'api';
+        p.lastPriceSource = state.lastPrices[key].source || 'api';
         p.lastPriceDate = state.lastPrices[key].updatedAt;
       }
     });
-    return Object.values(map);
+
+    // רק פוזיציות פתוחות
+    return Object.values(map).filter(p => Math.abs(p.qty) > 1e-12);
   }
 
   function computeCashFlowsAndSummary() {
@@ -713,23 +757,41 @@
     const positions = buildPositions();
     const tbody = document.querySelector('#positionsTable tbody');
     tbody.innerHTML = '';
+
     positions.forEach(p => {
       const tr = document.createElement('tr');
-      const valueBase = amountToBase(p.qty * p.lastPrice, p.currency);
+      const valueBase = amountToBase(p.qty * (p.lastPrice || 0), p.currency);
+
       tr.innerHTML = `
         <td>${p.symbol}</td>
         <td>${p.qty.toFixed(4)}</td>
         <td>${p.currency}</td>
-        <td>${p.lastPrice ? p.lastPrice.toFixed(4) : '-'}</td>
+        <td>${(p.lastPrice || p.lastPrice === 0) ? Number(p.lastPrice).toFixed(4) : '-'}</td>
         <td>${valueBase.toFixed(2)} ${base}</td>
       `;
+
+      // ✅ חדש: קליק על שורה -> מילוי טופס מחיר ידני
+      tr.style.cursor = 'pointer';
+      tr.title = 'לחץ כדי למלא בטופס "עדכון מחיר ידני"';
+      tr.addEventListener('click', () => {
+        const symInput = document.getElementById('manualPriceSymbol');
+        const curInput = document.getElementById('manualPriceCurrency');
+        const dateInput = document.getElementById('manualPriceDate');
+
+        if (symInput) symInput.value = p.symbol;
+        if (curInput && p.currency) curInput.value = (p.currency || '').toUpperCase();
+        if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0,10);
+
+        symInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+
       tbody.appendChild(tr);
     });
 
     const labels = [];
     const data = [];
     positions.forEach(p => {
-      const valBase = amountToBase(p.qty * p.lastPrice, p.currency);
+      const valBase = amountToBase(p.qty * (p.lastPrice || 0), p.currency);
       if (Math.abs(valBase) > 0.01) { labels.push(p.symbol); data.push(valBase); }
     });
 
@@ -827,8 +889,10 @@
     const today = new Date().toISOString().slice(0,10);
     const tradeDate = document.getElementById('tradeDate');
     const divDate = document.getElementById('divDate');
+    const manualDate = document.getElementById('manualPriceDate');
     if (tradeDate && !tradeDate.value) tradeDate.value = today;
     if (divDate && !divDate.value) divDate.value = today;
+    if (manualDate && !manualDate.value) manualDate.value = today;
   }
 
   // Trade form + edit
@@ -971,6 +1035,8 @@
       const newState = JSON.parse(area.value);
       if (confirm('ייבוא ישכתב את כל הנתונים הקיימים. להמשיך?')) {
         state = newState;
+        state.settings = state.settings || {};
+        state.lastPrices = state.lastPrices || {};
         saveState();
         renderAll();
         alert('ייבוא הצליח.');
@@ -993,31 +1059,47 @@
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-trades'));
   });
 
-  // ---- Alpha Vantage: prices ----
+  // Helpers
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+  function normalizeSymbol(raw) { return (raw || '').trim().toUpperCase(); }
+
+  // ---- Alpha Vantage: prices (ETF-friendly) ----
   async function fetchQuote(symbol) {
-    if (!state.settings.enableOnlineQuotes) return null;
+    if (!state.settings.enableOnlineQuotes) return { ok:false, reason:'disabled' };
     const apiKey = state.settings.alphaVantageKey;
-    if (!apiKey) return null;
+    if (!apiKey) return { ok:false, reason:'no_key' };
 
     const cleanSymbol = symbol.toUpperCase().trim();
-    if (!cleanSymbol) return null;
+    if (!cleanSymbol) return { ok:false, reason:'empty_symbol' };
 
     const url =
       'https://www.alphavantage.co/query' +
-      '?function=GLOBAL_QUOTE' +
+      '?function=TIME_SERIES_DAILY_ADJUSTED' +
       '&symbol=' + encodeURIComponent(cleanSymbol) +
+      '&outputsize=compact' +
       '&apikey=' + encodeURIComponent(apiKey);
 
     try {
       const res = await fetch(url);
-      if (!res.ok) return null;
+      if (!res.ok) return { ok:false, reason:'http', status: res.status };
+
       const data = await res.json();
-      const quote = data['Global Quote'];
-      if (!quote) return null;
-      const price = parseFloat(quote['05. price']);
-      if (!isFinite(price)) return null;
-      return { price, currency: 'USD' };
-    } catch (e) { return null; }
+
+      if (data.Note) return { ok:false, reason:'rate_limit', message: data.Note };
+      if (data['Error Message']) return { ok:false, reason:'error_message', message: data['Error Message'] };
+
+      const series = data['Time Series (Daily)'];
+      if (!series) return { ok:false, reason:'no_series' };
+
+      const dates = Object.keys(series).sort().reverse();
+      const latest = dates[0];
+      const close = parseFloat(series[latest]['4. close']);
+      if (!isFinite(close)) return { ok:false, reason:'bad_price' };
+
+      return { ok:true, symbol: cleanSymbol, price: close, currency: 'USD', asOf: latest };
+    } catch (e) {
+      return { ok:false, reason:'exception', message: e?.message || String(e) };
+    }
   }
 
   document.getElementById('btnUpdatePrices').addEventListener('click', async () => {
@@ -1034,19 +1116,88 @@
     }
 
     let updatedCount = 0;
-    for (const p of positions) {
-      const quote = await fetchQuote(p.symbol);
-      if (quote && typeof quote.price === 'number') {
-        state.lastPrices[p.symbol.toUpperCase()] = { price: quote.price, currency: quote.currency || p.currency, updatedAt: new Date().toISOString() };
+    const failed = [];
+
+    for (let i = 0; i < positions.length; i++) {
+      const p = positions[i];
+      const result = await fetchQuote(p.symbol);
+
+      if (result.ok) {
+        state.lastPrices[p.symbol.toUpperCase()] = {
+          price: result.price,
+          currency: result.currency || p.currency,
+          updatedAt: new Date().toISOString(),
+          source: 'api'
+        };
         updatedCount++;
+      } else {
+        if (result.reason === 'rate_limit') {
+          saveState();
+          renderPortfolio();
+          alert(
+            'Alpha Vantage: הגעת למגבלת קריאות (5 בדקה).\n' +
+            'מה שכבר עודכן נשמר.\n' +
+            'נסה שוב בעוד דקה.\n\n' +
+            (result.message || '')
+          );
+          return;
+        }
+        failed.push(p.symbol.toUpperCase());
       }
+
+      // Free tier: ~5 calls/min => ~12.5s delay
+      if (i < positions.length - 1) await sleep(12500);
     }
+
     saveState();
     renderPortfolio();
-    alert('סיום עדכון מחירי שוק.\nעודכנו מחירים עבור ' + updatedCount + ' ניירות.');
+    alert(
+      'סיום עדכון מחירי שוק.\nעודכנו מחירים עבור ' + updatedCount + ' ניירות.' +
+      (failed.length ? '\nלא עודכנו: ' + failed.join(', ') : '')
+    );
   });
 
   document.getElementById('btnRecalc').addEventListener('click', renderPortfolio);
+
+  // ---- Manual price update ----
+  document.getElementById('btnSaveManualPrice').addEventListener('click', () => {
+    const sym = normalizeSymbol(document.getElementById('manualPriceSymbol').value);
+    const price = Number(document.getElementById('manualPriceValue').value);
+    const currency = (document.getElementById('manualPriceCurrency').value || '').trim().toUpperCase() || state.settings.baseCurrency;
+    const date = document.getElementById('manualPriceDate').value || new Date().toISOString().slice(0,10);
+
+    if (!sym) { alert('נא להזין סימול / מספר נייר.'); return; }
+    if (!isFinite(price) || price <= 0) { alert('נא להזין מחיר תקין.'); return; }
+    if (!currency) { alert('נא להזין מטבע.'); return; }
+
+    state.lastPrices[sym] = {
+      price,
+      currency,
+      updatedAt: new Date(date + 'T00:00:00').toISOString(),
+      source: 'manual'
+    };
+
+    saveState();
+    renderPortfolio();
+    alert('נשמר מחיר ידני עבור ' + sym + '.');
+  });
+
+  document.getElementById('btnDeleteManualPrice').addEventListener('click', () => {
+    const sym = normalizeSymbol(document.getElementById('manualPriceSymbol').value);
+    if (!sym) { alert('נא להזין סימול / מספר נייר למחיקה.'); return; }
+
+    if (!state.lastPrices[sym]) {
+      alert('אין מחיר שמור לנייר ' + sym + '.');
+      return;
+    }
+
+    if (confirm('למחוק את המחיר השמור עבור ' + sym + '?')) {
+      delete state.lastPrices[sym];
+      saveState();
+      renderPortfolio();
+      alert('נמחק מחיר שמור עבור ' + sym + '.');
+    }
+  });
 
   // ---- Alpha Vantage: dividends with holding-interval filter ----
   function getHoldingIntervalsForSymbol(symbol) {
@@ -1115,6 +1266,10 @@
       const res = await fetch(url);
       if (!res.ok) { alert('שגיאה בקריאת דיבידנדים (status ' + res.status + ').'); return 0; }
       const data = await res.json();
+
+      if (data.Note) { alert('מגבלת קריאות (Alpha Vantage). נסה שוב בעוד דקה.\n\n' + data.Note); return 0; }
+      if (data['Error Message']) { alert('שגיאה: ' + data['Error Message']); return 0; }
+
       const series = data['Monthly Adjusted Time Series'];
       if (!series) { alert('לא נמצאה סדרה עבור ' + cleanSymbol + '.'); return 0; }
 

@@ -128,6 +128,7 @@
     .badge-icon.savings { border:1px solid rgba(250,204,21,0.9); color:#facc15; }
     .badge-icon.trend { border:1px solid rgba(52,211,153,0.7); color:#6ee7b7; }
     .badge-icon.xirr { border:1px solid rgba(96,165,250,0.7); color:#bfdbfe; }
+    .badge-icon.tax { border:1px solid rgba(239,68,68,0.7); color:#fecaca; }
 
     .section-title {
       font-size:13px; font-weight:500; margin:4px 2px 6px; color:#e5e7eb;
@@ -207,6 +208,33 @@
       box-shadow: 0 0 16px rgba(34,197,94,0.35);
       transition: width .2s ease;
     }
+
+    /* Chart legend */
+    .legend-wrap {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 10px;
+    }
+    @media(min-width:720px){
+      .legend-wrap { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    .legend-item {
+      display:flex; align-items:center; gap:8px;
+      padding:6px 8px;
+      border-radius:12px;
+      border:1px solid rgba(55,65,81,0.8);
+      background: rgba(2,6,23,0.35);
+      font-size: 11px;
+      color: #e5e7eb;
+    }
+    .legend-swatch {
+      width: 10px; height: 10px; border-radius: 3px;
+      flex: 0 0 auto;
+    }
+    .legend-text { display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .legend-text .t1 { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .legend-text .t2 { color: var(--text-muted); }
   </style>
 </head>
 
@@ -250,7 +278,9 @@
           </div>
           <div class="badge-icon money">💹</div>
         </div>
+        <div class="small">שווי שוק נוכחי (מס רווח הון חל רק במימוש).</div>
       </div>
+
       <div class="card">
         <div class="card-title-row">
           <div>
@@ -259,7 +289,9 @@
           </div>
           <div class="badge-icon savings">💰</div>
         </div>
+        <div class="small">סך קניות (ברוטו, כולל עמלות).</div>
       </div>
+
       <div class="card">
         <div class="card-title-row">
           <div>
@@ -268,7 +300,9 @@
           </div>
           <div class="badge-icon trend">📈</div>
         </div>
+        <div class="small">נטו אחרי מס: <b><span id="portfolioPLNet"></span></b></div>
       </div>
+
       <div class="card">
         <div class="card-title-row">
           <div>
@@ -277,7 +311,8 @@
           </div>
           <div class="badge-icon xirr">𝑟</div>
         </div>
-        <div class="small">XIRR: <span id="portfolioXirr"></span></div>
+        <div class="small">XIRR (Gross): <span id="portfolioXirr"></span></div>
+        <div class="small">XIRR (Net): <b><span id="portfolioXirrNet"></span></b></div>
       </div>
 
       <div class="card">
@@ -288,7 +323,18 @@
           </div>
           <div class="badge-icon savings">💵</div>
         </div>
-        <div class="small">סך כל הדיבידנדים / קופונים שנקלטו במערכת, מומר למטבע הבסיס.</div>
+        <div class="small">נטו אחרי מס: <b><span id="portfolioDividendsNet"></span></b></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title-row">
+          <div>
+            <div class="metric-label">Estimated Taxes</div>
+            <div class="metric-value" id="portfolioTaxes"></div>
+          </div>
+          <div class="badge-icon tax">🧾</div>
+        </div>
+        <div class="small">מס על רווחי הון ממומשים + מס משוער על דיבידנדים/קופונים.</div>
       </div>
     </div>
 
@@ -325,7 +371,7 @@
     <div class="card">
       <div class="card-subtitle">
         מאפשר להזין מחיר אחרון לנייר בלי לבצע קנייה/מכירה (נשמר מקומית בלבד).
-        שימושי במיוחד לניירות בת״א (כמו 5130513) שלא נתמכים ב-Alpha Vantage.
+        שימושי במיוחד לניירות בת״א שלא נתמכים ב-Alpha Vantage.
       </div>
 
       <div class="flex-row">
@@ -370,11 +416,17 @@
           <th>מטבע</th>
           <th>מחיר אחרון</th>
           <th>שווי (בסיס)</th>
+          <th>P/L (בסיס)</th>
+          <th>P/L %</th>
+          <th>Net P/L (בסיס)</th>
+          <th>Net %</th>
         </tr>
         </thead>
         <tbody></tbody>
       </table>
-      <div class="small" style="margin-top:6px;">מחיר אחרון = עסקה אחרונה / Alpha Vantage (GLOBAL_QUOTE) / מחיר ידני (לפי העדיפות).</div>
+      <div class="small" style="margin-top:6px;">
+        Net כולל: מס דיבידנד משוער + מס רווחי הון ממומש בפועל (רק במכירה וברווח), לפי 25% ברירת מחדל.
+      </div>
     </div>
 
     <div class="section-title"><span class="icon">🧩</span> Allocation by Symbol</div>
@@ -383,6 +435,8 @@
       <div class="small" id="chartFallback" style="margin-top:8px; display:none;">
         ⚠️ Chart.js לא נטען (למשל אין אינטרנט ב-PWA). האפליקציה תמשיך לעבוד בלי הגרף.
       </div>
+      <div id="allocationLegend" class="legend-wrap"></div>
+      <div class="small" style="margin-top:8px;">הגרף מציג Top 7 לפי שווי + "אחר".</div>
     </div>
   </div>
 
@@ -462,18 +516,23 @@
         <input id="divSymbol" placeholder="למשל: AAPL" required />
         <div class="flex-row">
           <div class="flex-1">
-            <label>סכום</label>
+            <label>סכום (ברוטו)</label>
             <input id="divAmount" type="number" step="0.01" required />
           </div>
-          <div class="flex-1">
-            <label>מטבע</label>
-            <input id="divCurrency" placeholder="USD / ILS / EUR" required />
+          <div class="flex-row">
+            <div class="flex-1">
+              <label>מטבע</label>
+              <input id="divCurrency" placeholder="USD / ILS / EUR" required />
+            </div>
           </div>
         </div>
         <label>תאריך קבלה</label>
         <input id="divDate" type="date" required />
         <button type="submit" class="btn btn-primary" style="margin-top:4px;">שמור דיבידנד</button>
       </form>
+      <div class="small" style="margin-top:6px;">
+        מס משוער: 25% (מוצג בטבלה כ-Tax + Net).
+      </div>
     </div>
 
     <div class="section-title"><span class="icon">⚙️</span> ייבוא אוטומטי מ-Alpha Vantage</div>
@@ -512,7 +571,14 @@
       </div>
       <table id="divTable">
         <thead>
-        <tr><th>תאריך</th><th>נייר</th><th>סכום</th><th>מטבע</th></tr>
+        <tr>
+          <th>תאריך</th>
+          <th>נייר</th>
+          <th>Gross</th>
+          <th>Tax (25%)</th>
+          <th>Net</th>
+          <th>מטבע</th>
+        </tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -546,6 +612,17 @@
       <div class="small">לדוגמה: 123456</div>
     </div>
 
+    <div class="section-title"><span class="icon">🧾</span> מס (ברירת מחדל 25%)</div>
+    <div class="card">
+      <div class="small">
+        כרגע זה קבוע בקוד כ־25% (כפי שביקשת). אם תרצה בהמשך להפוך את זה לשדות הגדרה – תגיד ואני אוסיף.
+      </div>
+      <div class="small" style="margin-top:6px;">
+        • מס רווח הון: רק במימוש בפועל וברווח בלבד<br/>
+        • מס דיבידנד/קופון: משוער על כל רשומה במערכת
+      </div>
+    </div>
+
     <div class="section-title"><span class="icon">🛟</span> גיבוי / שחזור נתונים</div>
     <div class="card">
       <button id="btnExport" class="btn btn-secondary" style="margin-bottom:6px;">ייצא JSON</button>
@@ -577,6 +654,10 @@
   window.addEventListener('unhandledrejection', (e) => showErr('Promise Error: ' + (e.reason?.message || e.reason || e)));
 
   const STORAGE_KEY = 'invest_app_state_v4';
+
+  // Taxes (as requested)
+  const TAX_RATE_CAP_GAIN = 0.25; // on realized gains only
+  const TAX_RATE_DIV = 0.25;      // estimated withholding on dividends/coupons
 
   let state = {
     trades: [],
@@ -639,10 +720,12 @@
 
   function amountToBase(amount, currency) { return amount * getFxRate(currency); }
 
+  function normalizeSymbol(raw) { return (raw || '').trim().toUpperCase(); }
+
   function buildPositions() {
     const map = {};
     state.trades.forEach(tr => {
-      const key = (tr.symbol || '').toUpperCase();
+      const key = normalizeSymbol(tr.symbol);
       if (!key) return;
 
       if (!map[key]) {
@@ -671,39 +754,175 @@
     return Object.values(map).filter(p => Math.abs(p.qty) > 1e-12);
   }
 
-  function computeCashFlowsAndSummary() {
-    const flows = [];
-    let totalBuysBase = 0;
-    let totalSellsBase = 0;
-    let totalDividendsBase = 0;
-    let totalFeesBase = 0;
+  // --- Weighted-average cost basis + realized taxes per symbol ---
+  function computePerSymbolStats() {
+    const pos = {};
+    const tradesSorted = state.trades.slice().sort((a,b) => a.date.localeCompare(b.date));
 
-    state.trades.forEach(tr => {
+    for (const tr of tradesSorted) {
+      const sym = normalizeSymbol(tr.symbol);
+      if (!sym) continue;
       const qty = Number(tr.qty);
       const price = Number(tr.price);
       const fee = Number(tr.fee || 0);
+
       const amount = qty * price;
       const amountBase = amountToBase(amount, tr.currency);
       const feeBase = amountToBase(fee, tr.currency);
+
+      if (!pos[sym]) {
+        pos[sym] = {
+          symbol: sym,
+          qty: 0,
+          costBaseOpen: 0,
+          realizedGainBase: 0,
+          realizedTaxBase: 0,
+          buysBase: 0,
+          sellsBase: 0,
+          feesBaseTotal: 0,
+        };
+      }
+
+      const p = pos[sym];
+      p.feesBaseTotal += feeBase;
+
+      if (tr.type === 'buy') {
+        p.qty += qty;
+        p.costBaseOpen += (amountBase + feeBase);
+        p.buysBase += (amountBase + feeBase);
+      } else {
+        const qtySell = qty;
+        if (p.qty <= 0) {
+          p.sellsBase += (amountBase - feeBase);
+          continue;
+        }
+        const qtyUsed = Math.min(qtySell, p.qty);
+        const avgCostBase = (p.qty > 0) ? (p.costBaseOpen / p.qty) : 0;
+        const bookCost = avgCostBase * qtyUsed;
+
+        const proceedsNetOfFee = (amountBase - feeBase) * (qtyUsed / qtySell);
+        const realizedGain = proceedsNetOfFee - bookCost;
+        const realizedTax = Math.max(0, realizedGain) * TAX_RATE_CAP_GAIN;
+
+        p.realizedGainBase += realizedGain;
+        p.realizedTaxBase += realizedTax;
+
+        p.qty -= qtyUsed;
+        p.costBaseOpen -= bookCost;
+
+        p.sellsBase += proceedsNetOfFee;
+      }
+    }
+
+    const divGrossBySym = {};
+    const divNetBySym = {};
+    let totalDivGrossBase = 0;
+    let totalDivNetBase = 0;
+
+    for (const d of state.dividends) {
+      const sym = normalizeSymbol(d.symbol);
+      const amt = Number(d.amount);
+      const amtBase = amountToBase(amt, d.currency);
+      const netBase = amtBase * (1 - TAX_RATE_DIV);
+
+      totalDivGrossBase += amtBase;
+      totalDivNetBase += netBase;
+
+      divGrossBySym[sym] = (divGrossBySym[sym] || 0) + amtBase;
+      divNetBySym[sym] = (divNetBySym[sym] || 0) + netBase;
+    }
+
+    const allSyms = new Set([...Object.keys(pos), ...Object.keys(divGrossBySym)]);
+    for (const sym of allSyms) {
+      if (!pos[sym]) pos[sym] = { symbol:sym, qty:0, costBaseOpen:0, realizedGainBase:0, realizedTaxBase:0, buysBase:0, sellsBase:0, feesBaseTotal:0 };
+      pos[sym].divGrossBase = divGrossBySym[sym] || 0;
+      pos[sym].divNetBase = divNetBySym[sym] || 0;
+    }
+
+    const totals = {
+      totalDivGrossBase,
+      totalDivNetBase,
+      totalDivTaxBase: totalDivGrossBase - totalDivNetBase,
+      totalRealizedTaxBase: Object.values(pos).reduce((s,p)=>s + (p.realizedTaxBase||0), 0),
+      totalRealizedGainBase: Object.values(pos).reduce((s,p)=>s + (p.realizedGainBase||0), 0),
+    };
+
+    return { pos, totals };
+  }
+
+  function computeCashFlowsAndSummary() {
+    const flowsGross = [];
+    const flowsNet = [];
+
+    let totalBuysBase = 0;
+    let totalSellsBase = 0;
+    let totalFeesBase = 0;
+
+    const tradesSorted = state.trades.slice().sort((a,b) => a.date.localeCompare(b.date));
+    const book = {};
+
+    function pushFlow(arr, date, amount){ arr.push({ date, amount }); }
+
+    for (const tr of tradesSorted) {
+      const sym = normalizeSymbol(tr.symbol);
+      if (!sym) continue;
+      const qty = Number(tr.qty);
+      const price = Number(tr.price);
+      const fee = Number(tr.fee || 0);
       const dateStr = tr.date;
 
-      let cashBase;
+      const amount = qty * price;
+      const amountBase = amountToBase(amount, tr.currency);
+      const feeBase = amountToBase(fee, tr.currency);
+
+      if (!book[sym]) book[sym] = { qty: 0, costBaseOpen: 0 };
+
       if (tr.type === 'buy') {
-        cashBase = -(amountBase + feeBase);
+        pushFlow(flowsGross, dateStr, -(amountBase + feeBase));
+        pushFlow(flowsNet, dateStr, -(amountBase + feeBase));
+
         totalBuysBase += amountBase;
+        totalFeesBase += feeBase;
+
+        book[sym].qty += qty;
+        book[sym].costBaseOpen += (amountBase + feeBase);
       } else {
-        cashBase = (amountBase - feeBase);
+        pushFlow(flowsGross, dateStr, (amountBase - feeBase));
+
         totalSellsBase += amountBase;
+        totalFeesBase += feeBase;
+
+        let realizedTax = 0;
+        if (book[sym].qty > 0) {
+          const qtyUsed = Math.min(qty, book[sym].qty);
+          const avgCostBase = book[sym].costBaseOpen / book[sym].qty;
+          const bookCost = avgCostBase * qtyUsed;
+
+          const proceedsNetOfFee = (amountBase - feeBase) * (qtyUsed / qty);
+          const realizedGain = proceedsNetOfFee - bookCost;
+          realizedTax = Math.max(0, realizedGain) * TAX_RATE_CAP_GAIN;
+
+          book[sym].qty -= qtyUsed;
+          book[sym].costBaseOpen -= bookCost;
+        }
+
+        pushFlow(flowsNet, dateStr, (amountBase - feeBase) - realizedTax);
       }
-      totalFeesBase += feeBase;
-      flows.push({ date: dateStr, amount: cashBase });
-    });
+    }
+
+    let totalDividendsGrossBase = 0;
+    let totalDividendsNetBase = 0;
 
     state.dividends.forEach(d => {
       const amt = Number(d.amount);
       const amtBase = amountToBase(amt, d.currency);
-      totalDividendsBase += amtBase;
-      flows.push({ date: d.date, amount: amtBase });
+      const netBase = amtBase * (1 - TAX_RATE_DIV);
+
+      totalDividendsGrossBase += amtBase;
+      totalDividendsNetBase += netBase;
+
+      pushFlow(flowsGross, d.date, amtBase);
+      pushFlow(flowsNet, d.date, netBase);
     });
 
     const positions = buildPositions();
@@ -714,12 +933,33 @@
     });
 
     const todayIso = new Date().toISOString().slice(0,10);
-    if (marketValueBase !== 0) flows.push({ date: todayIso, amount: marketValueBase });
+    if (marketValueBase !== 0) {
+      pushFlow(flowsGross, todayIso, marketValueBase);
+      pushFlow(flowsNet, todayIso, marketValueBase);
+    }
 
-    const profitBase = (marketValueBase + totalSellsBase + totalDividendsBase) - (totalBuysBase + totalFeesBase);
-    const netInvestedBase = (totalBuysBase + totalFeesBase) - (totalSellsBase + totalDividendsBase);
+    const profitGrossBase = (marketValueBase + totalSellsBase + totalDividendsGrossBase) - (totalBuysBase + totalFeesBase);
 
-    return { flows, profitBase, marketValueBase, netInvestedBase, totalDividendsBase, totalBuysBase, totalSellsBase };
+    const { totals } = computePerSymbolStats();
+    const estimatedTaxesBase = (totals.totalDivTaxBase || 0) + (totals.totalRealizedTaxBase || 0);
+
+    const profitNetBase = profitGrossBase - estimatedTaxesBase;
+
+    const netInvestedGrossBase = (totalBuysBase + totalFeesBase) - (totalSellsBase + totalDividendsGrossBase);
+
+    return {
+      flowsGross,
+      flowsNet,
+      profitGrossBase,
+      profitNetBase,
+      marketValueBase,
+      netInvestedGrossBase,
+      totalDividendsGrossBase,
+      totalDividendsNetBase,
+      totalBuysBase,
+      totalSellsBase,
+      estimatedTaxesBase
+    };
   }
 
   function xirr(cashFlows) {
@@ -753,37 +993,99 @@
     return guess;
   }
 
+  function fmtMoney(x, base) {
+    if (!isFinite(x)) return '-';
+    return Number(x).toFixed(2) + ' ' + base;
+  }
+  function fmtPct(x) {
+    if (!isFinite(x)) return '-';
+    return (x >= 0 ? '+' : '') + x.toFixed(2) + ' %';
+  }
+
+  // Chart palette (distinct colors)
+  const CHART_COLORS = [
+    '#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#fb7185', '#22c55e',
+    '#38bdf8', '#f59e0b', '#e879f9', '#4ade80', '#93c5fd'
+  ];
+
+  function buildAllocationTopN(positions, n=7) {
+    const rows = positions.map(p => {
+      const valBase = amountToBase(p.qty * (p.lastPrice || 0), p.currency);
+      return { symbol: p.symbol, valueBase: valBase };
+    }).filter(r => Math.abs(r.valueBase) > 0.01);
+
+    rows.sort((a,b)=>b.valueBase - a.valueBase);
+
+    const top = rows.slice(0, n);
+    const rest = rows.slice(n);
+    const otherSum = rest.reduce((s,r)=>s+r.valueBase, 0);
+
+    if (otherSum > 0.01) top.push({ symbol:'אחר', valueBase: otherSum });
+
+    const labels = top.map(r=>r.symbol);
+    const data = top.map(r=>r.valueBase);
+    return { labels, data, rows: top };
+  }
+
+  function renderLegend(chartRows, base, totalValueBase) {
+    const legend = document.getElementById('allocationLegend');
+    legend.innerHTML = '';
+    chartRows.forEach((r, idx) => {
+      const pct = totalValueBase > 0 ? (r.valueBase / totalValueBase * 100) : 0;
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      item.innerHTML = `
+        <span class="legend-swatch" style="background:${CHART_COLORS[idx % CHART_COLORS.length]}"></span>
+        <div class="legend-text">
+          <div class="t1">${r.symbol}</div>
+          <div class="t2">${pct.toFixed(1)}% • ${fmtMoney(r.valueBase, base)}</div>
+        </div>
+      `;
+      legend.appendChild(item);
+    });
+  }
+
   function renderPortfolio() {
     document.getElementById('baseCurrencyLabel').textContent = state.settings.baseCurrency;
 
-    const { flows, profitBase, marketValueBase, netInvestedBase, totalDividendsBase, totalBuysBase } =
-      computeCashFlowsAndSummary();
+    const {
+      flowsGross, flowsNet,
+      profitGrossBase, profitNetBase,
+      marketValueBase,
+      netInvestedGrossBase,
+      totalDividendsGrossBase, totalDividendsNetBase,
+      totalBuysBase,
+      estimatedTaxesBase
+    } = computeCashFlowsAndSummary();
 
     const base = state.settings.baseCurrency;
 
-    document.getElementById('portfolioValue').textContent = marketValueBase.toFixed(2) + ' ' + base;
-    document.getElementById('portfolioInvested').textContent = totalBuysBase.toFixed(2) + ' ' + base;
+    document.getElementById('portfolioValue').textContent = fmtMoney(marketValueBase, base);
+    document.getElementById('portfolioInvested').textContent = fmtMoney(totalBuysBase, base);
 
     const plEl = document.getElementById('portfolioPL');
-    const plStr = profitBase.toFixed(2) + ' ' + base;
-    if (profitBase > 0) {
-      plEl.textContent = '+' + plStr;
+    const plNetEl = document.getElementById('portfolioPLNet');
+
+    if (profitGrossBase > 0) {
+      plEl.textContent = '+' + fmtMoney(profitGrossBase, base);
       plEl.classList.remove('metric-negative');
       plEl.classList.add('metric-positive');
-    } else if (profitBase < 0) {
-      plEl.textContent = plStr;
+    } else if (profitGrossBase < 0) {
+      plEl.textContent = fmtMoney(profitGrossBase, base);
       plEl.classList.remove('metric-positive');
       plEl.classList.add('metric-negative');
     } else {
-      plEl.textContent = plStr;
+      plEl.textContent = fmtMoney(profitGrossBase, base);
       plEl.classList.remove('metric-positive','metric-negative');
       plEl.classList.add('metric-neutral');
     }
 
+    plNetEl.textContent = fmtMoney(profitNetBase, base);
+
     const retEl = document.getElementById('portfolioReturn');
-    if (netInvestedBase > 0) {
-      const pct = (profitBase / netInvestedBase) * 100;
-      retEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + ' %';
+    if (netInvestedGrossBase > 0) {
+      const pct = (profitGrossBase / netInvestedGrossBase) * 100;
+      retEl.textContent = fmtPct(pct);
       retEl.classList.toggle('metric-positive', pct >= 0);
       retEl.classList.toggle('metric-negative', pct < 0);
     } else {
@@ -792,31 +1094,58 @@
       retEl.classList.add('metric-neutral');
     }
 
-    const rate = xirr(flows);
-    document.getElementById('portfolioXirr').textContent = rate === null ? '-' : (rate * 100).toFixed(2) + ' %';
+    const rateGross = xirr(flowsGross);
+    const rateNet = xirr(flowsNet);
+    document.getElementById('portfolioXirr').textContent = rateGross === null ? '-' : (rateGross * 100).toFixed(2) + ' %';
+    document.getElementById('portfolioXirrNet').textContent = rateNet === null ? '-' : (rateNet * 100).toFixed(2) + ' %';
 
-    const divEl = document.getElementById('portfolioDividends');
-    if (divEl) divEl.textContent = totalDividendsBase.toFixed(2) + ' ' + base;
+    document.getElementById('portfolioDividends').textContent = fmtMoney(totalDividendsGrossBase, base);
+    document.getElementById('portfolioDividendsNet').textContent = fmtMoney(totalDividendsNetBase, base);
 
+    const taxEl = document.getElementById('portfolioTaxes');
+    taxEl.textContent = fmtMoney(estimatedTaxesBase, base);
+    taxEl.classList.toggle('metric-negative', estimatedTaxesBase > 0);
+    taxEl.classList.toggle('metric-neutral', estimatedTaxesBase <= 0);
+
+    // Positions
     const positions = buildPositions();
     const tbody = document.querySelector('#positionsTable tbody');
     tbody.innerHTML = '';
 
+    const { pos: symStats } = computePerSymbolStats();
+
     positions.forEach(p => {
-      const tr = document.createElement('tr');
+      const row = document.createElement('tr');
+
       const valueBase = amountToBase(p.qty * (p.lastPrice || 0), p.currency);
 
-      tr.innerHTML = `
+      const st = symStats[p.symbol] || {};
+      const openCostBase = Number(st.costBaseOpen || 0);
+      const divGrossBase = Number(st.divGrossBase || 0);
+      const divNetBase = Number(st.divNetBase || 0);
+      const realizedTaxBase = Number(st.realizedTaxBase || 0);
+
+      const plGross = (valueBase + divGrossBase) - openCostBase;
+      const plNet = (valueBase + divNetBase) - openCostBase - realizedTaxBase;
+
+      const pctGross = openCostBase > 0 ? (plGross / openCostBase) * 100 : NaN;
+      const pctNet = openCostBase > 0 ? (plNet / openCostBase) * 100 : NaN;
+
+      row.innerHTML = `
         <td>${p.symbol}</td>
-        <td>${p.qty.toFixed(4)}</td>
+        <td>${Number(p.qty).toFixed(4)}</td>
         <td>${p.currency}</td>
         <td>${(p.lastPrice || p.lastPrice === 0) ? Number(p.lastPrice).toFixed(4) : '-'}</td>
-        <td>${valueBase.toFixed(2)} ${base}</td>
+        <td>${fmtMoney(valueBase, base)}</td>
+        <td>${fmtMoney(plGross, base)}</td>
+        <td>${isFinite(pctGross) ? fmtPct(pctGross) : '-'}</td>
+        <td>${fmtMoney(plNet, base)}</td>
+        <td>${isFinite(pctNet) ? fmtPct(pctNet) : '-'}</td>
       `;
 
-      tr.style.cursor = 'pointer';
-      tr.title = 'לחץ כדי למלא בטופס "עדכון מחיר ידני"';
-      tr.addEventListener('click', () => {
+      row.style.cursor = 'pointer';
+      row.title = 'לחץ כדי למלא בטופס "עדכון מחיר ידני"';
+      row.addEventListener('click', () => {
         const symInput = document.getElementById('manualPriceSymbol');
         const curInput = document.getElementById('manualPriceCurrency');
         const dateInput = document.getElementById('manualPriceDate');
@@ -828,16 +1157,10 @@
         symInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
 
-      tbody.appendChild(tr);
+      tbody.appendChild(row);
     });
 
-    const labels = [];
-    const data = [];
-    positions.forEach(p => {
-      const valBase = amountToBase(p.qty * (p.lastPrice || 0), p.currency);
-      if (Math.abs(valBase) > 0.01) { labels.push(p.symbol); data.push(valBase); }
-    });
-
+    // Allocation chart (Top 7 + Other) + legend
     const statusEl = document.getElementById('onlineQuotesStatus');
     statusEl.textContent = state.settings.enableOnlineQuotes
       ? 'עדכון מחירי שוק אונליין: פעיל (Alpha Vantage - GLOBAL_QUOTE).'
@@ -850,18 +1173,43 @@
     }
     chartFallback.style.display = 'none';
 
+    const { labels, data, rows } = buildAllocationTopN(positions, 7);
+
     const canvas = document.getElementById('allocationChart');
     const ctx = canvas.getContext('2d');
     if (allocationChart) allocationChart.destroy();
+
     allocationChart = new Chart(ctx, {
       type: 'doughnut',
-      data: { labels, datasets: [{ data }] },
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: labels.map((_,i)=>CHART_COLORS[i % CHART_COLORS.length]),
+          borderColor: 'rgba(2,6,23,0.7)',
+          borderWidth: 1
+        }]
+      },
       options: {
         plugins: {
-          legend: { position:'bottom', labels:{ color:'#e5e7eb', font:{ size:11 } } }
-        }
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const v = ctx.parsed;
+                const total = data.reduce((s,x)=>s+x,0);
+                const pct = total > 0 ? (v/total*100) : 0;
+                return `${ctx.label}: ${fmtMoney(v, base)} (${pct.toFixed(1)}%)`;
+              }
+            }
+          }
+        },
+        cutout: '58%'
       }
     });
+
+    const totalValueForChart = data.reduce((s,x)=>s+x,0);
+    renderLegend(rows, base, totalValueForChart);
   }
 
   function renderTrades() {
@@ -873,7 +1221,7 @@
       row.innerHTML = `
         <td>${tr.date}</td>
         <td>${tr.type === 'buy' ? 'קנייה' : 'מכירה'}</td>
-        <td>${(tr.symbol||'').toUpperCase()}</td>
+        <td>${normalizeSymbol(tr.symbol)}</td>
         <td>${Number(tr.qty).toFixed(4)}</td>
         <td>${Number(tr.price).toFixed(4)}</td>
         <td>${tr.currency}</td>
@@ -894,11 +1242,17 @@
     tbody.innerHTML = '';
     const sorted = state.dividends.slice().sort((a,b) => a.date.localeCompare(b.date));
     sorted.forEach(d => {
+      const gross = Number(d.amount);
+      const tax = isFinite(gross) ? gross * TAX_RATE_DIV : NaN;
+      const net = isFinite(gross) ? gross * (1 - TAX_RATE_DIV) : NaN;
+
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${d.date}</td>
-        <td>${(d.symbol||'').toUpperCase()}</td>
-        <td>${Number(d.amount).toFixed(2)}</td>
+        <td>${normalizeSymbol(d.symbol)}</td>
+        <td>${isFinite(gross) ? gross.toFixed(2) : '-'}</td>
+        <td>${isFinite(tax) ? tax.toFixed(2) : '-'}</td>
+        <td>${isFinite(net) ? net.toFixed(2) : '-'}</td>
         <td>${d.currency}</td>
       `;
       tbody.appendChild(row);
@@ -1103,7 +1457,6 @@
 
   // Helpers
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-  function normalizeSymbol(raw) { return (raw || '').trim().toUpperCase(); }
 
   // Progress helpers
   const progressWrap = document.getElementById('quoteProgressWrap');
@@ -1278,10 +1631,10 @@
     }
   });
 
-  // ---- Alpha Vantage: dividends (unchanged; monthly adjusted is still used) ----
+  // ---- Alpha Vantage: dividends (unchanged) ----
   function getHoldingIntervalsForSymbol(symbol) {
     const clean = symbol.toUpperCase();
-    const trades = state.trades.filter(t => (t.symbol||'').toUpperCase() === clean).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const trades = state.trades.filter(t => normalizeSymbol(t.symbol) === clean).slice().sort((a, b) => a.date.localeCompare(b.date));
     const intervals = [];
     let cumQty = 0;
     let currentStart = null;
@@ -1317,7 +1670,7 @@
     let qty = 0;
 
     state.trades
-      .filter(t => (t.symbol||'').toUpperCase() === clean && t.date <= cutoff)
+      .filter(t => normalizeSymbol(t.symbol) === clean && t.date <= cutoff)
       .sort((a, b) => a.date.localeCompare(b.date))
       .forEach(tr => qty += (tr.type === 'buy' ? 1 : -1) * Number(tr.qty));
 
@@ -1358,7 +1711,7 @@
 
       const existingKeys = new Set(
         state.dividends
-          .filter(d => (d.symbol||'').toUpperCase() === cleanSymbol)
+          .filter(d => normalizeSymbol(d.symbol) === cleanSymbol)
           .map(d => cleanSymbol + '|' + d.date + '|' + Number(d.amount).toFixed(6))
       );
 

@@ -759,25 +759,6 @@ header, .container { position: relative; z-index: 5; } /* keep UI above any over
   // =====================
   const META_DEFAULT = { assetClass:'unclassified', geo:'Unclassified', sector:'Unclassified' };
 
-  // You can edit these defaults over time; user data persists in localStorage.
-  const DEFAULT_ASSETS_META = {
-    'SCHD': { assetClass:'equity', geo:'US', sector:'Financials' },
-    'EMXC': { assetClass:'equity', geo:'Emerging', sector:'Mixed' },
-    'VEA':  { assetClass:'equity', geo:'Developed ex-US', sector:'Mixed' },
-    'XBI':  { assetClass:'equity', geo:'US', sector:'Healthcare' },
-    'ICLN': { assetClass:'equity', geo:'Global', sector:'Energy' },
-    'TLT':  { assetClass:'bond',   geo:'US', sector:'Government' },
-    'VTI':  { assetClass:'equity', geo:'US', sector:'Mixed' },
-    'SDGR': { assetClass:'equity', geo:'US', sector:'Tech' },
-
-    // ישראל - דוגמאות (התאם כרצונך)
-    'MTF אגח ישראלי ארוך': { assetClass:'bond', geo:'Israel', sector:'Government' },
-    'איביאי תא 125':       { assetClass:'equity', geo:'Israel', sector:'Mixed' },
-    'בנק מזרחי':           { assetClass:'equity', geo:'Israel', sector:'Financials' },
-    'בנק פועלים':          { assetClass:'equity', geo:'Israel', sector:'Financials' },
-    'יוחננוף אגח':         { assetClass:'bond', geo:'Israel', sector:'Consumer Staples' },
-    'שופרסל אגח':          { assetClass:'bond', geo:'Israel', sector:'Consumer Staples' },
-  };
 
   const LABELS_HE = {
     assetClass: {
@@ -852,9 +833,8 @@ header, .container { position: relative; z-index: 5; } /* keep UI above any over
         showErr('Error loading state: ' + (e.message || e));
       }
     } else {
-      // First run: seed defaults
-      state.assetsMeta = Object.assign({}, DEFAULT_ASSETS_META);
-    }
+  state.assetsMeta = {};
+}
 
     // Migration: normalize keys in lastPrices to match normalizeSymbol
     // and ensure assetsMeta has defaults for known symbols.
@@ -877,18 +857,10 @@ header, .container { position: relative; z-index: 5; } /* keep UI above any over
     state.trades = (state.trades || []).map(t => Object.assign({}, t, { symbol: normalizeSymbol(t.symbol) }));
     state.dividends = (state.dividends || []).map(d => Object.assign({}, d, { symbol: normalizeSymbol(d.symbol) }));
   }
-
-  function seedDefaultMetaForKnownSymbols() {
-    const known = getAllKnownSymbols();
-    for (const sym of known) {
-      if (!state.assetsMeta[sym] && DEFAULT_ASSETS_META[sym]) {
-        state.assetsMeta[sym] = Object.assign({}, DEFAULT_ASSETS_META[sym]);
-      } else if (!state.assetsMeta[sym]) {
-        // Keep empty => shows "Unclassified" in charts. No crash.
-        // state.assetsMeta[sym] = {}; // optional
-      }
-    }
-  }
+function seedDefaultMetaForKnownSymbols() {
+  // לא מוסיפים סיווגים אוטומטיים מהקוד.
+  // הסיווגים מגיעים רק מה-JSON (assetsMeta) או יתווספו בעתיד ממסך ניהול.
+}
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));

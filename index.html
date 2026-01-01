@@ -344,7 +344,7 @@
         <span class="pill">Base Currency: <span id="baseCurrencyLabel"></span></span>
       </div>
       <div class="card-subtitle">
-        מחושב לפי כל העסקאות והדיבידנדים בתוספת שווי שוק נוכחי של הפוזיציות.
+‎        מחושב לפי כל העסקאות והדיבידנדים בתוספת שווי שוק נוכחי של הפוזיציות.
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
         <button class="btn btn-secondary" id="btnRecalc">רענן חישובים</button>
@@ -370,14 +370,14 @@
     <div class="section-title"><span class="icon">✍️</span> עדכון מחיר ידני (למשל ניירות ישראליים)</div>
     <div class="card">
       <div class="card-subtitle">
-        מאפשר להזין מחיר אחרון לנייר בלי לבצע קנייה/מכירה (נשמר מקומית בלבד).
-        שימושי במיוחד לניירות בת״א שלא נתמכים ב-Alpha Vantage.
+‎        מאפשר להזין מחיר אחרון לנייר בלי לבצע קנייה/מכירה (נשמר מקומית בלבד).
+‎        שימושי במיוחד לניירות בת״א שלא נתמכים ב-Alpha Vantage.
       </div>
 
       <div class="flex-row">
         <div class="flex-1">
           <label>סימול / מספר נייר</label>
-          <input id="manualPriceSymbol" placeholder="למשל: 5130513 או AAPL" />
+          <input id="manualPriceSymbol" placeholder="למשל: 5130513 או AAPL או בנק פועלים" />
         </div>
         <div class="flex-1">
           <label>מחיר אחרון</label>
@@ -402,7 +402,7 @@
       </div>
 
       <div class="small" style="margin-top:6px;">
-        טיפ: אפשר גם ללחוץ על שורה בטבלת הפוזיציות למטה כדי למלא אוטומטית את הסימול והמטבע כאן.
+‎        טיפ: אפשר גם ללחוץ על שורה בטבלת הפוזיציות למטה כדי למלא אוטומטית את הסימול והמטבע כאן.
       </div>
     </div>
 
@@ -429,6 +429,7 @@
       </div>
     </div>
 
+    <!-- Existing chart: Allocation by symbol -->
     <div class="section-title"><span class="icon">🧩</span> Allocation by Symbol</div>
     <div class="card">
       <canvas id="allocationChart" height="190"></canvas>
@@ -438,6 +439,45 @@
       <div id="allocationLegend" class="legend-wrap"></div>
       <div class="small" style="margin-top:8px;">הגרף מציג Top 7 לפי שווי + "אחר".</div>
     </div>
+
+    <!-- NEW: Allocation by criteria -->
+    <div class="section-title"><span class="icon">🧱</span> חלוקה לפי סוג נכס</div>
+    <div class="card">
+      <canvas id="assetClassChart" height="180"></canvas>
+      <div class="small" id="assetClassChartFallback" style="margin-top:8px; display:none;">
+        ⚠️ Chart.js לא נטען. מוצגת טבלה במקום.
+      </div>
+      <table id="assetClassTable">
+        <thead><tr><th>קטגוריה</th><th>שווי</th><th>%</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="small" style="margin-top:8px;">טיפ: נייר ללא סיווג יופיע כ-"לא מסווג".</div>
+    </div>
+
+    <div class="section-title"><span class="icon">🌍</span> חלוקה גיאוגרפית</div>
+    <div class="card">
+      <canvas id="geoChart" height="180"></canvas>
+      <div class="small" id="geoChartFallback" style="margin-top:8px; display:none;">
+        ⚠️ Chart.js לא נטען. מוצגת טבלה במקום.
+      </div>
+      <table id="geoTable">
+        <thead><tr><th>קטגוריה</th><th>שווי</th><th>%</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-title"><span class="icon">🏭</span> חלוקה סקטוריאלית</div>
+    <div class="card">
+      <canvas id="sectorChart" height="180"></canvas>
+      <div class="small" id="sectorChartFallback" style="margin-top:8px; display:none;">
+        ⚠️ Chart.js לא נטען. מוצגת טבלה במקום.
+      </div>
+      <table id="sectorTable">
+        <thead><tr><th>קטגוריה</th><th>שווי</th><th>%</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
   </div>
 
   <!-- TRADES -->
@@ -455,7 +495,7 @@
           </div>
           <div class="flex-1">
             <label>סימול (Ticker)</label>
-            <input id="tradeSymbol" required placeholder="למשל: AAPL" />
+            <input id="tradeSymbol" required placeholder="למשל: AAPL או בנק פועלים" />
           </div>
         </div>
         <div class="flex-row">
@@ -513,7 +553,7 @@
     <div class="card">
       <form id="dividendForm">
         <label>נייר</label>
-        <input id="divSymbol" placeholder="למשל: AAPL" required />
+        <input id="divSymbol" placeholder="למשל: AAPL או בנק פועלים" required />
         <div class="flex-row">
           <div class="flex-1">
             <label>סכום (ברוטו)</label>
@@ -531,15 +571,15 @@
         <button type="submit" class="btn btn-primary" style="margin-top:4px;">שמור דיבידנד</button>
       </form>
       <div class="small" style="margin-top:6px;">
-        מס משוער: 25% (מוצג בטבלה כ-Tax + Net).
+‎        מס משוער: 25% (מוצג בטבלה כ-Tax + Net).
       </div>
     </div>
 
     <div class="section-title"><span class="icon">⚙️</span> ייבוא אוטומטי מ-Alpha Vantage</div>
     <div class="card">
       <div class="card-subtitle">
-        ייבוא דיבידנדים היסטוריים לפי סימול באמצעות Alpha Vantage.
-        הנתונים נשמרים מקומית בלבד. יש מגבלת קריאות (5 לדקה / 500 ביום).
+‎        ייבוא דיבידנדים היסטוריים לפי סימול באמצעות Alpha Vantage.
+‎        הנתונים נשמרים מקומית בלבד. יש מגבלת קריאות (5 לדקה / 500 ביום).
       </div>
       <div class="flex-row">
         <div class="flex-1">
@@ -558,8 +598,8 @@
       </div>
       <button id="btnImportDivAlpha" class="btn btn-secondary" style="margin-top:4px;">ייבא דיבידנדים מ-Alpha Vantage</button>
       <div class="small" style="margin-top:6px;">
-        מתבסס על <code>TIME_SERIES_MONTHLY_ADJUSTED</code>.<br/>
-        מובאים רק דיבידנדים שנמצאים בתוך תקופות ההחזקה בפועל (לפי העסקאות) והם מוכפלים בכמות המניות שהחזקת באותו תאריך.
+‎        מתבסס על <code>TIME_SERIES_MONTHLY_ADJUSTED</code>.<br/>
+‎        מובאים רק דיבידנדים שנמצאים בתוך תקופות ההחזקה בפועל (לפי העסקאות) והם מוכפלים בכמות המניות שהחזקת באותו תאריך.
       </div>
     </div>
 
@@ -594,8 +634,8 @@
       <label>מטבע בסיס</label>
       <input id="baseCurrencyInput" placeholder="ILS / USD / EUR" />
       <div class="small" style="margin-top:6px;">
-        שערי המרה (כמה שווה 1 יחידת מטבע במטבע הבסיס).<br/>
-        לדוגמה: אם בסיס = ILS ו-USD = 3.7 – אז כל 1 דולר = 3.7 ש"ח.
+‎        שערי המרה (כמה שווה 1 יחידת מטבע במטבע הבסיס).<br/>
+‎        לדוגמה: אם בסיס = ILS ו-USD = 3.7 – אז כל 1 דולר = 3.7 ש"ח.
       </div>
       <div id="fxRatesContainer" style="margin-top:8px;"></div>
 
@@ -615,11 +655,11 @@
     <div class="section-title"><span class="icon">🧾</span> מס (ברירת מחדל 25%)</div>
     <div class="card">
       <div class="small">
-        כרגע זה קבוע בקוד כ־25% (כפי שביקשת). אם תרצה בהמשך להפוך את זה לשדות הגדרה – תגיד ואני אוסיף.
+‎        כרגע זה קבוע בקוד כ־25% (כפי שביקשת). אם תרצה בהמשך להפוך את זה לשדות הגדרה – תגיד ואני אוסיף.
       </div>
       <div class="small" style="margin-top:6px;">
-        • מס רווח הון: רק במימוש בפועל וברווח בלבד<br/>
-        • מס דיבידנד/קופון: משוער על כל רשומה במערכת
+‎        • מס רווח הון: רק במימוש בפועל וברווח בלבד<br/>
+‎        • מס דיבידנד/קופון: משוער על כל רשומה במערכת
       </div>
     </div>
 
@@ -635,9 +675,20 @@
     <div class="section-title"><span class="icon">🔒</span> פרטיות</div>
     <div class="card">
       <div class="small">
-        • כל המידע נשמר ב-localStorage בדפדפן בלבד.<br/>
-        • כאשר עדכון מחירי שוק כבוי – אין יציאה לאינטרנט בכלל.<br/>
-        • כאשר הוא פעיל – נשלחים ל-Alpha Vantage רק סימולים ו-API key שלך.
+‎        • כל המידע נשמר ב-localStorage בדפדפן בלבד.<br/>
+‎        • כאשר עדכון מחירי שוק כבוי – אין יציאה לאינטרנט בכלל.<br/>
+‎        • כאשר הוא פעיל – נשלחים ל-Alpha Vantage רק סימולים ו-API key שלך.
+      </div>
+    </div>
+
+    <div class="section-title"><span class="icon">🗂️</span> סיווגים (assetsMeta)</div>
+    <div class="card">
+      <div class="small">
+‎        כרגע הסיווגים נשמרים אוטומטית בתוך ה-JSON תחת <code>assetsMeta</code>.<br/>
+‎        אם לא סיווגת נייר – הוא יוצג כ-"לא מסווג" בגרפים החדשים.
+      </div>
+      <div class="small" style="margin-top:6px;">
+‎        טיפ: תוכל לערוך את <code>assetsMeta</code> ידנית דרך Export/Import עד שנוסיף מסך ניהול סיווגים.
       </div>
     </div>
   </div>
@@ -645,17 +696,22 @@
 
 <script>
 (() => {
+  // =====================
+  // SECTION 0: Safety + Error UI
+  // =====================
   const errorBar = document.getElementById('errorBar');
   function showErr(msg) {
-    errorBar.textContent = msg;
+    errorBar.textContent = String(msg || 'Unknown error');
     errorBar.classList.add('show');
   }
   window.addEventListener('error', (e) => showErr('JS Error: ' + (e.message || e.error || e)));
   window.addEventListener('unhandledrejection', (e) => showErr('Promise Error: ' + (e.reason?.message || e.reason || e)));
 
-  const STORAGE_KEY = 'invest_app_state_v4';
+  // =====================
+  // SECTION 1: Constants + State
+  // =====================
+  const STORAGE_KEY = 'invest_app_state_v5'; // bump version because schema adds assetsMeta
 
-  // Taxes (as requested)
   const TAX_RATE_CAP_GAIN = 0.25; // on realized gains only
   const TAX_RATE_DIV = 0.25;      // estimated withholding on dividends/coupons
 
@@ -668,18 +724,117 @@
       enableOnlineQuotes: false,
       alphaVantageKey: ''
     },
-    lastPrices: {}
+    lastPrices: {},
+    assetsMeta: {} // NEW
   };
 
   let currentEditTradeId = null;
-  let allocationChart = null;
 
+  // Charts
+  let allocationChart = null;      // by symbol (existing)
+  let assetClassChart = null;      // NEW
+  let geoChart = null;             // NEW
+  let sectorChart = null;          // NEW
+
+  // =====================
+  // SECTION 2: Hebrew-safe symbol normalization
+  // =====================
+  // Fixes: whitespace duplicates, Hebrew quotes variants, and uppercases ONLY latin letters.
+  function normalizeSymbol(raw) {
+    let s = (raw || '').trim();
+    s = s.replace(/\s+/g, ' ');
+    s = s.replace(/[״]/g, '"').replace(/[׳]/g, "'");
+    s = s.replace(/[a-z]/g, ch => ch.toUpperCase());
+    return s;
+  }
+  function hasHebrewLetters(s) { return /[א-ת]/.test(s || ''); }
+  function isIsraeliNumericSymbol(s) { return /^\d{5,}$/.test(s || ''); }
+
+  // =====================
+  // SECTION 3: Asset classification (assetsMeta) + labels
+  // =====================
+  const META_DEFAULT = { assetClass:'unclassified', geo:'Unclassified', sector:'Unclassified' };
+
+  // You can edit these defaults over time; user data persists in localStorage.
+  const DEFAULT_ASSETS_META = {
+    'SCHD': { assetClass:'equity', geo:'US', sector:'Financials' },
+    'EMXC': { assetClass:'equity', geo:'Emerging', sector:'Mixed' },
+    'VEA':  { assetClass:'equity', geo:'Developed ex-US', sector:'Mixed' },
+    'XBI':  { assetClass:'equity', geo:'US', sector:'Healthcare' },
+    'ICLN': { assetClass:'equity', geo:'Global', sector:'Energy' },
+    'TLT':  { assetClass:'bond',   geo:'US', sector:'Government' },
+    'VTI':  { assetClass:'equity', geo:'US', sector:'Mixed' },
+    'SDGR': { assetClass:'equity', geo:'US', sector:'Tech' },
+
+‎    // ישראל - דוגמאות (התאם כרצונך)
+    'MTF אגח ישראלי ארוך': { assetClass:'bond', geo:'Israel', sector:'Government' },
+‎    'איביאי תא 125':       { assetClass:'equity', geo:'Israel', sector:'Mixed' },
+‎    'בנק מזרחי':           { assetClass:'equity', geo:'Israel', sector:'Financials' },
+‎    'בנק פועלים':          { assetClass:'equity', geo:'Israel', sector:'Financials' },
+‎    'יוחננוף אגח':         { assetClass:'bond', geo:'Israel', sector:'Consumer Staples' },
+‎    'שופרסל אגח':          { assetClass:'bond', geo:'Israel', sector:'Consumer Staples' },
+  };
+
+  const LABELS_HE = {
+    assetClass: {
+      equity: 'מניות',
+      bond: 'אג״ח',
+      cash: 'מזומן',
+      fund: 'קרנות',
+      other: 'אחר',
+      unclassified: 'לא מסווג'
+    },
+    geo: {
+      Israel: 'ישראל',
+      US: 'ארה״ב',
+      Europe: 'אירופה',
+      Global: 'גלובלי',
+      Emerging: 'שווקים מתעוררים',
+      'Developed ex-US': 'מפותחות (ללא ארה״ב)',
+      Unclassified: 'לא מסווג'
+    },
+    sector: {
+      Financials: 'פיננסים',
+      Tech: 'טכנולוגיה',
+      Healthcare: 'בריאות',
+      Energy: 'אנרגיה / נקי',
+      Industrials: 'תעשייה',
+      'Consumer Staples': 'צריכה בסיסית',
+      Consumer: 'צריכה',
+      Government: 'ממשלתי',
+      Mixed: 'מעורב / ETF',
+      Unclassified: 'לא מסווג'
+    }
+  };
+
+  function getAssetMeta(symbol) {
+    const key = normalizeSymbol(symbol);
+    const m = state.assetsMeta?.[key];
+    return Object.assign({}, META_DEFAULT, m || {});
+  }
+
+  // Collect all symbols currently used (open positions + history)
+  function getAllKnownSymbols() {
+    const set = new Set();
+    (state.trades || []).forEach(t => set.add(normalizeSymbol(t.symbol)));
+    (state.dividends || []).forEach(d => set.add(normalizeSymbol(d.symbol)));
+    Object.keys(state.lastPrices || {}).forEach(k => set.add(normalizeSymbol(k)));
+    return Array.from(set).filter(Boolean);
+  }
+
+  // =====================
+  // SECTION 4: Persistence (load/save) + migration
+  // =====================
   function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       try {
         const saved = JSON.parse(raw);
         state = Object.assign(state, saved);
+
+        // Strong defaults
+        state.trades = state.trades || [];
+        state.dividends = state.dividends || [];
         state.settings = Object.assign({
           baseCurrency: 'ILS',
           fxRates: { ILS: 1 },
@@ -687,16 +842,57 @@
           alphaVantageKey: ''
         }, state.settings || {});
         state.lastPrices = state.lastPrices || {};
+        state.assetsMeta = state.assetsMeta || {};
       } catch (e) {
         console.error('Error loading state', e);
         showErr('Error loading state: ' + (e.message || e));
       }
+    } else {
+      // First run: seed defaults
+      state.assetsMeta = Object.assign({}, DEFAULT_ASSETS_META);
+    }
+
+    // Migration: normalize keys in lastPrices to match normalizeSymbol
+    // and ensure assetsMeta has defaults for known symbols.
+    migrateStateForNormalization();
+    seedDefaultMetaForKnownSymbols();
+  }
+
+  function migrateStateForNormalization() {
+    // Normalize lastPrices keys
+    const lp = state.lastPrices || {};
+    const newLp = {};
+    for (const [k, v] of Object.entries(lp)) {
+      const nk = normalizeSymbol(k);
+      newLp[nk] = v;
+    }
+    state.lastPrices = newLp;
+
+    // Normalize trades & dividends symbols for future consistency (non-breaking)
+    // NOTE: this modifies stored data; it's safe and prevents duplicates.
+    state.trades = (state.trades || []).map(t => Object.assign({}, t, { symbol: normalizeSymbol(t.symbol) }));
+    state.dividends = (state.dividends || []).map(d => Object.assign({}, d, { symbol: normalizeSymbol(d.symbol) }));
+  }
+
+  function seedDefaultMetaForKnownSymbols() {
+    const known = getAllKnownSymbols();
+    for (const sym of known) {
+      if (!state.assetsMeta[sym] && DEFAULT_ASSETS_META[sym]) {
+        state.assetsMeta[sym] = Object.assign({}, DEFAULT_ASSETS_META[sym]);
+      } else if (!state.assetsMeta[sym]) {
+        // Keep empty => shows "Unclassified" in charts. No crash.
+        // state.assetsMeta[sym] = {}; // optional
+      }
     }
   }
 
-  function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
 
-  // Tabs
+  // =====================
+  // SECTION 5: Tabs UI
+  // =====================
   const tabs = document.querySelectorAll('.tab');
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
@@ -709,6 +905,9 @@
     });
   });
 
+  // =====================
+  // SECTION 6: FX helpers
+  // =====================
   function getFxRate(currency) {
     const base = state.settings.baseCurrency;
     if (currency === base) return 1;
@@ -717,20 +916,30 @@
     if (typeof r === 'number' && !isNaN(r) && r > 0) return r;
     return 1;
   }
-
   function amountToBase(amount, currency) { return amount * getFxRate(currency); }
 
-  function normalizeSymbol(raw) { return (raw || '').trim().toUpperCase(); }
-
+  // =====================
+  // SECTION 7: Positions builder (fixed to support lastPrices + Hebrew symbols)
+  // =====================
   function buildPositions() {
     const map = {};
+
+    // Aggregate trades into positions
     state.trades.forEach(tr => {
       const key = normalizeSymbol(tr.symbol);
       if (!key) return;
 
       if (!map[key]) {
-        map[key] = { symbol: key, currency: tr.currency, qty: 0, lastPrice: tr.price, lastPriceSource: 'trade', lastPriceDate: tr.date };
+        map[key] = {
+          symbol: key,
+          currency: tr.currency,
+          qty: 0,
+          lastPrice: tr.price,
+          lastPriceSource: 'trade',
+          lastPriceDate: tr.date
+        };
       }
+
       const p = map[key];
       const signedQty = (tr.type === 'buy' ? 1 : -1) * Number(tr.qty);
       p.qty += signedQty;
@@ -740,21 +949,27 @@
         p.lastPriceDate = tr.date;
         p.currency = tr.currency;
       }
-
-      // lastPrices (manual/api) override
-      if (state.lastPrices[key]) {
-        p.lastPrice = state.lastPrices[key].price;
-        p.currency = state.lastPrices[key].currency;
-        p.lastPriceSource = state.lastPrices[key].source || 'api';
-        p.lastPriceDate = state.lastPrices[key].updatedAt;
-      }
     });
 
-    // only open positions
+    // Apply lastPrices override (manual/api) even if no trade in loop order
+    for (const [sym, info] of Object.entries(state.lastPrices || {})) {
+      const key = normalizeSymbol(sym);
+      if (!map[key]) {
+        // If there is a price but no open position, ignore (or keep for future)
+        continue;
+      }
+      map[key].lastPrice = info.price;
+      map[key].currency = info.currency || map[key].currency;
+      map[key].lastPriceSource = info.source || 'api';
+      map[key].lastPriceDate = info.updatedAt || map[key].lastPriceDate;
+    }
+
     return Object.values(map).filter(p => Math.abs(p.qty) > 1e-12);
   }
 
-  // --- Weighted-average cost basis + realized taxes per symbol ---
+  // =====================
+  // SECTION 8: Cost basis + realized taxes per symbol
+  // =====================
   function computePerSymbolStats() {
     const pos = {};
     const tradesSorted = state.trades.slice().sort((a,b) => a.date.localeCompare(b.date));
@@ -762,6 +977,7 @@
     for (const tr of tradesSorted) {
       const sym = normalizeSymbol(tr.symbol);
       if (!sym) continue;
+
       const qty = Number(tr.qty);
       const price = Number(tr.price);
       const fee = Number(tr.fee || 0);
@@ -850,6 +1066,9 @@
     return { pos, totals };
   }
 
+  // =====================
+  // SECTION 9: Portfolio summary + cashflows + XIRR
+  // =====================
   function computeCashFlowsAndSummary() {
     const flowsGross = [];
     const flowsNet = [];
@@ -866,6 +1085,7 @@
     for (const tr of tradesSorted) {
       const sym = normalizeSymbol(tr.symbol);
       if (!sym) continue;
+
       const qty = Number(tr.qty);
       const price = Number(tr.price);
       const fee = Number(tr.fee || 0);
@@ -993,6 +1213,9 @@
     return guess;
   }
 
+  // =====================
+  // SECTION 10: Formatting
+  // =====================
   function fmtMoney(x, base) {
     if (!isFinite(x)) return '-';
     return Number(x).toFixed(2) + ' ' + base;
@@ -1002,7 +1225,9 @@
     return (x >= 0 ? '+' : '') + x.toFixed(2) + ' %';
   }
 
-  // Chart palette (distinct colors)
+  // =====================
+  // SECTION 11: Chart helpers
+  // =====================
   const CHART_COLORS = [
     '#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#fb7185', '#22c55e',
     '#38bdf8', '#f59e0b', '#e879f9', '#4ade80', '#93c5fd'
@@ -1045,6 +1270,119 @@
     });
   }
 
+  // Allocation by criteria (assetClass/geo/sector)
+  function allocationBy(field) {
+    const positions = buildPositions();
+    const buckets = {};
+    let total = 0;
+
+    positions.forEach(p => {
+      const valueBase = amountToBase(p.qty * (p.lastPrice || 0), p.currency);
+      if (!isFinite(valueBase) || valueBase <= 0) return;
+
+      const meta = getAssetMeta(p.symbol);
+      const key = meta[field] || 'Unclassified';
+
+      buckets[key] = (buckets[key] || 0) + valueBase;
+      total += valueBase;
+    });
+
+    const rows = Object.entries(buckets)
+      .map(([k,v]) => ({ key:k, valueBase:v }))
+      .sort((a,b)=>b.valueBase - a.valueBase);
+
+    return { total, rows };
+  }
+
+  function renderAllocationTable(field, tableId) {
+    const base = state.settings.baseCurrency;
+    const { total, rows } = allocationBy(field);
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    rows.forEach(r => {
+      const pct = total > 0 ? (r.valueBase / total * 100) : 0;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${(LABELS_HE[field] && LABELS_HE[field][r.key]) ? LABELS_HE[field][r.key] : r.key}</td>
+        <td>${fmtMoney(r.valueBase, base)}</td>
+        <td>${pct.toFixed(1)}%</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // If empty, show "no data" row
+    if (rows.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="3" class="small">אין נתונים להצגה.</td>`;
+      tbody.appendChild(tr);
+    }
+  }
+
+  function renderCriteriaChart(field, canvasId, fallbackId) {
+    const base = state.settings.baseCurrency;
+    const { total, rows } = allocationBy(field);
+
+    const labels = rows.map(r => (LABELS_HE[field]?.[r.key] || r.key));
+    const data = rows.map(r => r.valueBase);
+
+    const fallbackEl = document.getElementById(fallbackId);
+
+    if (typeof window.Chart !== 'function') {
+      if (fallbackEl) fallbackEl.style.display = 'block';
+      return;
+    } else {
+      if (fallbackEl) fallbackEl.style.display = 'none';
+    }
+
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    let chartRef = null;
+    if (field === 'assetClass') chartRef = assetClassChart;
+    if (field === 'geo') chartRef = geoChart;
+    if (field === 'sector') chartRef = sectorChart;
+
+    if (chartRef) chartRef.destroy();
+
+    const newChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: labels.map((_,i)=>CHART_COLORS[i % CHART_COLORS.length]),
+          borderColor: 'rgba(2,6,23,0.7)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (c) => {
+                const v = c.parsed;
+                const pct = total > 0 ? (v/total*100) : 0;
+                return `${c.label}: ${fmtMoney(v, base)} (${pct.toFixed(1)}%)`;
+              }
+            }
+          }
+        },
+        cutout: '58%'
+      }
+    });
+
+    if (field === 'assetClass') assetClassChart = newChart;
+    if (field === 'geo') geoChart = newChart;
+    if (field === 'sector') sectorChart = newChart;
+  }
+
+  // =====================
+  // SECTION 12: Rendering
+  // =====================
   function renderPortfolio() {
     document.getElementById('baseCurrencyLabel').textContent = state.settings.baseCurrency;
 
@@ -1107,7 +1445,7 @@
     taxEl.classList.toggle('metric-negative', estimatedTaxesBase > 0);
     taxEl.classList.toggle('metric-neutral', estimatedTaxesBase <= 0);
 
-    // Positions
+    // Positions table
     const positions = buildPositions();
     const tbody = document.querySelector('#positionsTable tbody');
     tbody.innerHTML = '';
@@ -1160,56 +1498,66 @@
       tbody.appendChild(row);
     });
 
-    // Allocation chart (Top 7 + Other) + legend
+    // Online quote status
     const statusEl = document.getElementById('onlineQuotesStatus');
     statusEl.textContent = state.settings.enableOnlineQuotes
-      ? 'עדכון מחירי שוק אונליין: פעיל (Alpha Vantage - GLOBAL_QUOTE).'
-      : 'עדכון מחירי שוק אונליין: כבוי (אין יציאה לאינטרנט).';
+‎      ? 'עדכון מחירי שוק אונליין: פעיל (Alpha Vantage - GLOBAL_QUOTE).'
+‎      : 'עדכון מחירי שוק אונליין: כבוי (אין יציאה לאינטרנט).';
 
+    // Existing chart (by symbol)
     const chartFallback = document.getElementById('chartFallback');
     if (typeof window.Chart !== 'function') {
       chartFallback.style.display = 'block';
-      return;
-    }
-    chartFallback.style.display = 'none';
+    } else {
+      chartFallback.style.display = 'none';
 
-    const { labels, data, rows } = buildAllocationTopN(positions, 7);
+      const { labels, data, rows } = buildAllocationTopN(positions, 7);
 
-    const canvas = document.getElementById('allocationChart');
-    const ctx = canvas.getContext('2d');
-    if (allocationChart) allocationChart.destroy();
+      const canvas = document.getElementById('allocationChart');
+      const ctx = canvas.getContext('2d');
+      if (allocationChart) allocationChart.destroy();
 
-    allocationChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels,
-        datasets: [{
-          data,
-          backgroundColor: labels.map((_,i)=>CHART_COLORS[i % CHART_COLORS.length]),
-          borderColor: 'rgba(2,6,23,0.7)',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => {
-                const v = ctx.parsed;
-                const total = data.reduce((s,x)=>s+x,0);
-                const pct = total > 0 ? (v/total*100) : 0;
-                return `${ctx.label}: ${fmtMoney(v, base)} (${pct.toFixed(1)}%)`;
+      allocationChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: labels.map((_,i)=>CHART_COLORS[i % CHART_COLORS.length]),
+            borderColor: 'rgba(2,6,23,0.7)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (c) => {
+                  const v = c.parsed;
+                  const total = data.reduce((s,x)=>s+x,0);
+                  const pct = total > 0 ? (v/total*100) : 0;
+                  return `${c.label}: ${fmtMoney(v, base)} (${pct.toFixed(1)}%)`;
+                }
               }
             }
-          }
-        },
-        cutout: '58%'
-      }
-    });
+          },
+          cutout: '58%'
+        }
+      });
 
-    const totalValueForChart = data.reduce((s,x)=>s+x,0);
-    renderLegend(rows, base, totalValueForChart);
+      const totalValueForChart = data.reduce((s,x)=>s+x,0);
+      renderLegend(rows, base, totalValueForChart);
+    }
+
+    // NEW: tables + charts by criteria
+    renderAllocationTable('assetClass', 'assetClassTable');
+    renderAllocationTable('geo', 'geoTable');
+    renderAllocationTable('sector', 'sectorTable');
+
+    renderCriteriaChart('assetClass', 'assetClassChart', 'assetClassChartFallback');
+    renderCriteriaChart('geo', 'geoChart', 'geoChartFallback');
+    renderCriteriaChart('sector', 'sectorChart', 'sectorChartFallback');
   }
 
   function renderTrades() {
@@ -1281,6 +1629,11 @@
     document.getElementById('alphaVantageKey').value = state.settings.alphaVantageKey || '';
   }
 
+  function renderAll() { renderPortfolio(); renderTrades(); renderDividends(); renderSettings(); }
+
+  // =====================
+  // SECTION 13: Default dates
+  // =====================
   function setDefaultDates() {
     const today = new Date().toISOString().slice(0,10);
     const tradeDate = document.getElementById('tradeDate');
@@ -1291,7 +1644,9 @@
     if (manualDate && !manualDate.value) manualDate.value = today;
   }
 
-  // Trade form + edit
+  // =====================
+  // SECTION 14: Trades form + edit
+  // =====================
   function resetTradeForm() {
     document.getElementById('tradeForm').reset();
     currentEditTradeId = null;
@@ -1326,7 +1681,7 @@
   document.getElementById('tradeForm').addEventListener('submit', e => {
     e.preventDefault();
     const type = document.getElementById('tradeType').value;
-    const symbol = (document.getElementById('tradeSymbol').value || '').trim();
+    const symbol = normalizeSymbol(document.getElementById('tradeSymbol').value); // normalized
     const qty = Number(document.getElementById('tradeQty').value);
     const price = Number(document.getElementById('tradePrice').value);
     const currency = (document.getElementById('tradeCurrency').value || '').trim() || state.settings.baseCurrency;
@@ -1342,6 +1697,7 @@
       if (idx >= 0) state.trades[idx] = { id: currentEditTradeId, type, symbol, qty, price, currency, fee, date };
     }
 
+    seedDefaultMetaForKnownSymbols();
     saveState();
     renderTrades();
     renderPortfolio();
@@ -1360,16 +1716,19 @@
     }
   });
 
-  // Dividends manual
+  // =====================
+  // SECTION 15: Dividends manual
+  // =====================
   document.getElementById('dividendForm').addEventListener('submit', e => {
     e.preventDefault();
-    const symbol = (document.getElementById('divSymbol').value || '').trim();
+    const symbol = normalizeSymbol(document.getElementById('divSymbol').value); // normalized
     const amount = Number(document.getElementById('divAmount').value);
     const currency = (document.getElementById('divCurrency').value || '').trim() || state.settings.baseCurrency;
     const date = document.getElementById('divDate').value;
     if (!symbol || !date || !amount) return;
 
     state.dividends.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2), symbol, amount, currency, date });
+    seedDefaultMetaForKnownSymbols();
     saveState();
     renderDividends();
     renderPortfolio();
@@ -1386,7 +1745,9 @@
     }
   });
 
-  // Settings
+  // =====================
+  // SECTION 16: Settings
+  // =====================
   document.getElementById('btnAddCurrency').addEventListener('click', () => {
     const container = document.getElementById('fxRatesContainer');
     const row = document.createElement('div');
@@ -1420,7 +1781,9 @@
     alert('ההגדרות נשמרו.');
   });
 
-  // Export / Import
+  // =====================
+  // SECTION 17: Export / Import (supports old JSON without assetsMeta)
+  // =====================
   document.getElementById('btnExport').addEventListener('click', () => {
     document.getElementById('exportArea').value = JSON.stringify(state, null, 2);
   });
@@ -1430,9 +1793,16 @@
     try {
       const newState = JSON.parse(area.value);
       if (confirm('ייבוא ישכתב את כל הנתונים הקיימים. להמשיך?')) {
-        state = newState;
+        state = Object.assign({}, state, newState);
+        state.trades = state.trades || [];
+        state.dividends = state.dividends || [];
         state.settings = state.settings || {};
         state.lastPrices = state.lastPrices || {};
+        state.assetsMeta = state.assetsMeta || {};
+
+        migrateStateForNormalization();
+        seedDefaultMetaForKnownSymbols();
+
         saveState();
         renderAll();
         alert('ייבוא הצליח.');
@@ -1455,10 +1825,11 @@
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-trades'));
   });
 
-  // Helpers
+  // =====================
+  // SECTION 18: Helpers (sleep + progress)
+  // =====================
   function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-  // Progress helpers
   const progressWrap = document.getElementById('quoteProgressWrap');
   const progressBar = document.getElementById('quoteProgressBar');
   const progressText = document.getElementById('quoteProgressText');
@@ -1481,7 +1852,9 @@
     progressText.textContent = `מעדכן ${done}/${total}: ${currentSymbol || ''}`;
   }
 
-  // ---- Alpha Vantage: FREE endpoint for quotes ----
+  // =====================
+  // SECTION 19: Alpha Vantage quotes (skip Hebrew + IL numerics)
+  // =====================
   async function fetchQuote(symbol) {
     if (!state.settings.enableOnlineQuotes) return { error: 'OFFLINE' };
     const apiKey = state.settings.alphaVantageKey;
@@ -1540,12 +1913,12 @@
 
     for (let i = 0; i < total; i++) {
       const p = positions[i];
-      const sym = p.symbol.toUpperCase();
+      const sym = normalizeSymbol(p.symbol);
 
       progressSet(i, total, sym);
 
-      // Skip IL numeric symbols (manual)
-      if (/^\d{5,}$/.test(sym)) {
+      // Skip IL numeric symbols OR any symbol that contains Hebrew letters
+      if (isIsraeliNumericSymbol(sym) || hasHebrewLetters(sym)) {
         failed.push(sym + ' [IL_MANUAL]');
         continue;
       }
@@ -1571,7 +1944,6 @@
         }
       }
 
-      // Free tier: 5 calls/min => wait
       if (i < total - 1) await sleep(12500);
     }
 
@@ -1582,8 +1954,8 @@
     progressHide();
 
     alert(
-      'סיום עדכון מחירי שוק.\n' +
-      'עודכנו: ' + updatedCount + ' ניירות.\n' +
+‎      'סיום עדכון מחירי שוק.\n' +
+‎      'עודכנו: ' + updatedCount + ' ניירות.\n' +
       (failed.length ? ('לא עודכנו: ' + failed.join(', ') + '\n') : '') +
       (stopped ? '⚠️ עצרתי מוקדם בגלל הודעת מערכת/מגבלת קריאות. נסה שוב בעוד דקה.' : '')
     );
@@ -1591,7 +1963,9 @@
 
   document.getElementById('btnRecalc').addEventListener('click', renderPortfolio);
 
-  // ---- Manual price update ----
+  // =====================
+  // SECTION 20: Manual price update (Hebrew-safe)
+  // =====================
   document.getElementById('btnSaveManualPrice').addEventListener('click', () => {
     const sym = normalizeSymbol(document.getElementById('manualPriceSymbol').value);
     const price = Number(document.getElementById('manualPriceValue').value);
@@ -1631,10 +2005,16 @@
     }
   });
 
-  // ---- Alpha Vantage: dividends (unchanged) ----
+  // =====================
+  // SECTION 21: Alpha Vantage dividends (kept, with normalizeSymbol)
+  // =====================
   function getHoldingIntervalsForSymbol(symbol) {
-    const clean = symbol.toUpperCase();
-    const trades = state.trades.filter(t => normalizeSymbol(t.symbol) === clean).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const clean = normalizeSymbol(symbol);
+    const trades = state.trades
+      .filter(t => normalizeSymbol(t.symbol) === clean)
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date));
+
     const intervals = [];
     let cumQty = 0;
     let currentStart = null;
@@ -1665,7 +2045,7 @@
   }
 
   function getQuantityForSymbolOnDate(symbol, dateStr) {
-    const clean = symbol.toUpperCase();
+    const clean = normalizeSymbol(symbol);
     const cutoff = dateStr;
     let qty = 0;
 
@@ -1682,8 +2062,14 @@
     const apiKey = state.settings.alphaVantageKey;
     if (!apiKey) { alert('לא מוגדר API key ל-Alpha Vantage בהגדרות.'); return 0; }
 
-    const cleanSymbol = symbol.toUpperCase().trim();
+    const cleanSymbol = normalizeSymbol(symbol);
     if (!cleanSymbol) return 0;
+
+    // Skip Hebrew / IL here too
+    if (hasHebrewLetters(cleanSymbol) || isIsraeliNumericSymbol(cleanSymbol)) {
+      alert('ייבוא אוטומטי מ-Alpha Vantage תומך כרגע רק ב-Tickers לטיניים (כמו AAPL).');
+      return 0;
+    }
 
     const holdingIntervals = getHoldingIntervalsForSymbol(cleanSymbol);
     if (holdingIntervals.length === 0) { alert('לא נמצאו עסקאות עבור ' + cleanSymbol + ', לכן אין תקופת החזקה להצליב עם דיבידנדים.'); return 0; }
@@ -1752,16 +2138,20 @@
     if (!symbol) { alert('נא להזין סימול (Ticker).'); return; }
     const added = await importDividendsFromAlpha(symbol, yearsBack);
     alert(added === 0
-      ? ('לא נמצאו דיבידנדים חדשים לייבוא עבור ' + symbol.toUpperCase() + '.')
-      : ('יובאו ' + added + ' דיבידנדים חדשים עבור ' + symbol.toUpperCase() + '.')
+‎      ? ('לא נמצאו דיבידנדים חדשים לייבוא עבור ' + normalizeSymbol(symbol) + '.')
+‎      : ('יובאו ' + added + ' דיבידנדים חדשים עבור ' + normalizeSymbol(symbol) + '.')
     );
   });
 
-  function renderAll() { renderPortfolio(); renderTrades(); renderDividends(); renderSettings(); }
+  // =====================
+  // SECTION 22: Init
+  // =====================
+  function setDefaultDatesOnLoad() {
+    setDefaultDates();
+  }
 
-  // Init
   loadState();
-  setDefaultDates();
+  setDefaultDatesOnLoad();
 
   window.addEventListener('load', () => {
     try { renderAll(); }

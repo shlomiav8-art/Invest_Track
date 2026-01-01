@@ -159,7 +159,11 @@
     .small { font-size:11px; color:var(--text-muted); }
     .flex-row { display:flex; gap:6px; }
     .flex-1 { flex:1; }
-    canvas { max-width:100%; }
+    canvas { max-width:100%; pointer-events: none; }  /* iOS fix: canvases won't steal taps */
+
+header, .container { position: relative; z-index: 5; } /* keep UI above any overlay */
+#quoteProgressWrap { position: relative; z-index: 6; } /* progress stays above */
+#errorBar { position: relative; z-index: 999999; pointer-events: auto; }
 
     .tag {
       display:inline-block; padding:2px 6px; border-radius:999px;
